@@ -62,8 +62,11 @@ func (c *cluster) handle(db string, command cmd.Command) (*kusto.Result, error) 
 			pol = js
 		}
 		return kusto.NewResult(kusto.NewTable("Table_0", showCols, []any{name, "", pol, nil, "Cluster"})), nil
-	case strings.HasPrefix(text, ".alter cluster policy "):
-		rest := strings.TrimPrefix(text, ".alter cluster policy ")
+	// Both verbs land here: the capacity policy only accepts ".alter-merge"
+	// (Def.Merge). This fake stores what it is given either way -- it does not
+	// model the service's merge semantics, which the tests below don't rely on.
+	case strings.HasPrefix(text, ".alter cluster policy "), strings.HasPrefix(text, ".alter-merge cluster policy "):
+		rest := strings.TrimPrefix(strings.TrimPrefix(text, ".alter-merge cluster policy "), ".alter cluster policy ")
 		name, body, _ := strings.Cut(rest, " ")
 		js := body
 		if i := strings.Index(body, "\n<| "); i >= 0 {

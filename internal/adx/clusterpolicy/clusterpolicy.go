@@ -33,7 +33,8 @@ type Def struct {
 	// Name is the policy name used in commands, e.g. "callout".
 	Name string
 	// Alter renders the alter command. nil means the JSON form
-	// ".alter cluster policy <name> @'<json>'".
+	// ".alter cluster policy <name> @'<json>'", or ".alter-merge" when Merge
+	// is set.
 	Alter func(desired any) (cmd.Command, error)
 	// KQLFields are JSON keys whose string values are KQL text (two stage
 	// comparison instead of exact equality).
@@ -46,6 +47,11 @@ type Def struct {
 	// NoDelete marks policies Kusto cannot delete (capacity, query weak
 	// consistency): deleting the managed resource leaves the policy as is.
 	NoDelete bool
+	// Merge marks policies Kusto only accepts via ".alter-merge". The capacity
+	// policy is one: ".alter" is rejected with "The '.alter' command is not
+	// supported for CapacityPolicy. Please use '.alter-merge' instead."
+	// (observed against a real cluster on 2026-09-08).
+	Merge bool
 }
 
 // ShowCmd is ".show cluster policy <name>".
@@ -62,7 +68,14 @@ func (d Def) AlterCmd(desired any) (cmd.Command, error) {
 	if err != nil {
 		return cmd.Command{}, err
 	}
-	return cmd.New(".alter cluster policy ", d.Name, " ", js), nil
+	return cmd.New(d.alterVerb(), " cluster policy ", d.Name, " ", js), nil
+}
+
+func (d Def) alterVerb() string {
+	if d.Merge {
+		return ".alter-merge"
+	}
+	return ".alter"
 }
 
 // DeleteCmd is ".delete cluster policy <name>"; ok is false for policies

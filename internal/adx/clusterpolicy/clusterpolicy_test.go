@@ -40,6 +40,12 @@ func TestCommands(t *testing.T) {
 	if _, ok := (Def{Name: "capacity", NoDelete: true}).DeleteCmd(); ok {
 		t.Error("NoDelete must suppress the delete command")
 	}
+	// Kusto rejects ".alter cluster policy capacity": "The '.alter' command is
+	// not supported for CapacityPolicy. Please use '.alter-merge' instead."
+	merge, err := (Def{Name: "capacity", NoDelete: true, Merge: true}).AlterCmd(map[string]any{"IsEnabled": true})
+	if err != nil || merge.String() != ".alter-merge cluster policy capacity @'{\"IsEnabled\":true}'" {
+		t.Errorf("merge alter: %q %v", merge.String(), err)
+	}
 	custom := Def{Name: "request_classification", Alter: func(any) (cmd.Command, error) {
 		return cmd.New(".alter cluster policy request_classification @'{\"IsEnabled\":true}'", cmd.Pipe("T")), nil
 	}}

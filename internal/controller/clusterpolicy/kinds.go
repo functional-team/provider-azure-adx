@@ -94,11 +94,12 @@ func Callout() Def[*v1alpha1.CalloutPolicy] {
 }
 
 // Capacity defines the CapacityPolicy kind. The spec carries the raw policy
-// JSON; only its keys are compared. Kusto cannot delete the capacity policy.
+// JSON; only its keys are compared. Kusto cannot delete the capacity policy
+// and only accepts it via ".alter-merge", hence Merge.
 func Capacity() Def[*v1alpha1.CapacityPolicy] {
 	return Def[*v1alpha1.CapacityPolicy]{
 		Kind:   base.Kind[*v1alpha1.CapacityPolicy]{GVK: v1alpha1.CapacityPolicyGroupVersionKind, Object: &v1alpha1.CapacityPolicy{}, List: &v1alpha1.CapacityPolicyList{}},
-		Policy: adxclusterpolicy.Def{Name: "capacity", NoDelete: true},
+		Policy: adxclusterpolicy.Def{Name: "capacity", NoDelete: true, Merge: true},
 		Desired: func(cr *v1alpha1.CapacityPolicy) (any, error) {
 			return rawJSON(cr.Spec.ForProvider.Policy.Raw, "policy")
 		},
