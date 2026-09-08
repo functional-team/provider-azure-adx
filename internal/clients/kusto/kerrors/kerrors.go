@@ -81,9 +81,9 @@ func Details(err error) Detail {
 			fill(&d, m)
 		} else {
 			// No REST body: the v1 endpoint can answer HTTP 200 with an
-			// `Exceptions` array (observed on the emulator for `.show table X`
-			// on a missing table). The SDK folds that into the message, so
-			// the message is all we have to classify on.
+			// `Exceptions` array, which the SDK folds into the message
+			// (query/v1/dataset.go). The message is all we have to classify
+			// on. Not observed yet; kept as a defensive path.
 			d.Message = messageOf(kErr)
 		}
 	}

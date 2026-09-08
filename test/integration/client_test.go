@@ -20,7 +20,6 @@ package integration
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/functional-team/provider-azure-adx/internal/clients/kusto/cmd"
@@ -42,12 +41,20 @@ func TestClientSmoke(t *testing.T) {
 // classes the reconcilers depend on (spikes S2, S10).
 func TestErrorClassification(t *testing.T) {
 	ctx := context.Background()
-	_, err := kc.Mgmt(ctx, db, cmd.New(".show table ", cmd.Ident("DoesNotExist"), " cslschema"))
-	// Recorded for S11: the emulator answers HTTP 200 with a v1 `Exceptions`
-	// array here, a real cluster is expected to answer HTTP 400.
-	t.Logf("S11: missing-table response: %T: %v", errors.Unwrap(err), err)
-	if got := kerrors.Classify(err); got != kerrors.NotFound {
-		t.Errorf("missing table: Classify = %s (%+v)", got, kerrors.Details(err))
+	// S11: the emulator answers `.show table X cslschema` for a missing table
+	// with success and no rows; a real cluster answers with an EntityNotFound
+	// error. The reconcilers treat both as "does not exist".
+	res, err := kc.Mgmt(ctx, db, cmd.New(".show table ", cmd.Ident("DoesNotExist"), " cslschema"))
+	switch {
+	case err == nil:
+		t.Logf("S11: missing-table .show succeeded with %d rows", len(res.Rows()))
+		if len(res.Rows()) != 0 {
+			t.Errorf("missing table: expected no rows, got %d", len(res.Rows()))
+		}
+	case kerrors.Classify(err) == kerrors.NotFound:
+		t.Logf("S11: missing-table .show failed with NotFound: %v", err)
+	default:
+		t.Errorf("missing table: Classify = %s (%+v): %v", kerrors.Classify(err), kerrors.Details(err), err)
 	}
 
 	_, err = kc.Mgmt(ctx, db, cmd.New(".show table ", cmd.Ident("DoesNotExist"), " cslschemaa"))
