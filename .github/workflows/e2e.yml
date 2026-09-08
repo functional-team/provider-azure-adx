@@ -19,8 +19,10 @@ env:
 
 jobs:
   e2e:
-    # Skipped until the Azure variables exist (test/e2e/README.md).
-    if: vars.ADX_E2E_CLUSTER_URI != ''
+    # Skipped until the Azure secrets exist (test/e2e/README.md). Cluster
+    # name/URI/resource group/database are secrets, not variables, so they
+    # don't show up in plaintext to anyone with Actions-settings access.
+    if: ${{ secrets.ADX_E2E_CLUSTER_URI != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -42,7 +44,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Start dev cluster
         run: |
-          az kusto cluster start --name "${{ vars.ADX_E2E_CLUSTER_NAME }}" --resource-group "${{ vars.ADX_E2E_RESOURCE_GROUP }}"
+          az kusto cluster start --name "${{ secrets.ADX_E2E_CLUSTER_NAME }}" --resource-group "${{ secrets.ADX_E2E_RESOURCE_GROUP }}"
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -53,8 +55,8 @@ jobs:
       - name: Run e2e (build, kind, deploy, uptest)
         env:
           BUILD_ARGS: "--load"
-          ADX_E2E_CLUSTER_URI: ${{ vars.ADX_E2E_CLUSTER_URI }}
-          ADX_E2E_DATABASE: ${{ vars.ADX_E2E_DATABASE }}
+          ADX_E2E_CLUSTER_URI: ${{ secrets.ADX_E2E_CLUSTER_URI }}
+          ADX_E2E_DATABASE: ${{ secrets.ADX_E2E_DATABASE }}
           ADX_E2E_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ADX_E2E_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ADX_E2E_CLIENT_SECRET: ${{ secrets.ADX_E2E_CLIENT_SECRET }}
@@ -65,4 +67,4 @@ jobs:
       - name: Stop dev cluster
         if: always()
         run: |
-          az kusto cluster stop --name "${{ vars.ADX_E2E_CLUSTER_NAME }}" --resource-group "${{ vars.ADX_E2E_RESOURCE_GROUP }}" --no-wait || true
+          az kusto cluster stop --name "${{ secrets.ADX_E2E_CLUSTER_NAME }}" --resource-group "${{ secrets.ADX_E2E_RESOURCE_GROUP }}" --no-wait || true

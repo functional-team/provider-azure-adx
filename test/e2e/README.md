@@ -22,10 +22,13 @@ materialized-view backfill worth the name.
 
 Secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
 `ADX_E2E_CLIENT_SECRET` (the SPN secret used by the ProviderConfig inside kind;
-the workflow itself authenticates with OIDC).
+the workflow itself authenticates with OIDC), and `ADX_E2E_CLUSTER_NAME`,
+`ADX_E2E_RESOURCE_GROUP`, `ADX_E2E_CLUSTER_URI`, `ADX_E2E_DATABASE` (not
+sensitive by nature, but kept as secrets rather than variables so the dev
+cluster's name/URI aren't visible in plaintext to anyone with access to the
+Actions settings).
 
-Variables: `ADX_E2E_CLUSTER_NAME`, `ADX_E2E_RESOURCE_GROUP`,
-`ADX_E2E_CLUSTER_URI`, `ADX_E2E_DATABASE`.
+No repository variables are used.
 
 ## Running locally
 
