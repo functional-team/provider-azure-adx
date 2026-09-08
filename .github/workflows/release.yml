@@ -51,8 +51,12 @@ jobs:
         run: make -j2 build.all
         env:
           BUILD_ARGS: "--load"
+      # The build makelib only publishes for BRANCH_NAME main/master/release-*;
+      # on a tag push GITHUB_REF names the tag, so the branch is set explicitly.
       - name: Publish Artifacts
-        run: make publish BRANCH_NAME=${GITHUB_REF##*/}
+        run: make publish BRANCH_NAME=main
+      - name: Verify package in registry
+        run: docker buildx imagetools inspect ghcr.io/functional-team/provider-azure-adx:${GITHUB_REF_NAME}
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
