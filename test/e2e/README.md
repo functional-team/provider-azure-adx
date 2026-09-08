@@ -8,6 +8,14 @@ and is deleted cleanly. It runs against a **real** Azure Data Explorer cluster
 because the emulator has no authentication, no Azure Storage and no
 materialized-view backfill worth the name.
 
+Four examples are currently excluded in `Makefile` (`UPTEST_INPUT_MANIFESTS`):
+`externaltable.yaml`, `continuousexport.yaml` and
+`clustermanagedidentitypolicy.yaml` need the storage account below, which the
+dev environment doesn't have yet; `function.yaml`'s `parameters` value
+(`"(limit:long = 100)"`) collides with chainsaw/uptest's own templating, which
+parses any string starting with `(` and ending with `)` as a JMESPath
+expression — Function is still covered by the emulator integration suite.
+
 ## Azure resources
 
 | Resource | Purpose |

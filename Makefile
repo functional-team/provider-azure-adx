@@ -73,7 +73,23 @@ test-integration:
 # credentials are created by test/e2e/setup.sh from ADX_E2E_* variables, see
 # test/e2e/README.md.
 UPTEST_LOCAL_DEPLOY_TARGET = local.xpkg.deploy.provider.$(PROJECT_NAME)
-UPTEST_INPUT_MANIFESTS ?= $(shell find examples -name '*.yaml' -not -path 'examples/provider/*' -not -path 'examples/composition/*' | sort | tr '\n' ',' | sed 's/,$$//')
+# externaltable/continuousexport/clustermanagedidentitypolicy need a Storage
+# Account (test/e2e/README.md) the dev environment doesn't have yet.
+# function.yaml's parameters value "(limit:long = 100)" collides with
+# chainsaw/uptest's own templating: any string starting with "(" and ending
+# with ")" is parsed as an embedded JMESPath expression, and "limit:long =
+# 100" isn't valid JMESPath. No escape/opt-out exists upstream (checked
+# chainsaw's templating docs); Function is still covered by the emulator
+# integration suite. Revisit both exclusions once the storage account exists
+# and/or uptest offers a way around the templating collision.
+UPTEST_INPUT_MANIFESTS ?= $(shell find examples -name '*.yaml' \
+	-not -path 'examples/provider/*' \
+	-not -path 'examples/composition/*' \
+	-not -name 'externaltable.yaml' \
+	-not -name 'continuousexport.yaml' \
+	-not -name 'clustermanagedidentitypolicy.yaml' \
+	-not -name 'function.yaml' \
+	| sort | tr '\n' ',' | sed 's/,$$//')
 UPTEST_SETUP_SCRIPT ?= test/e2e/setup.sh
 UPTEST_DEFAULT_TIMEOUT ?= 1800s
 CROSSPLANE_VERSION ?= 2.0.2
