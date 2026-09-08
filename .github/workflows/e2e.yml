@@ -57,6 +57,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           install: true
+      # Must run before make e2e: uptest snapshots the examples before it calls
+      # the setup script, so rewriting from there is too late.
+      - name: Point examples at the dev database
+        env:
+          ADX_E2E_DATABASE: ${{ secrets.ADX_E2E_DATABASE }}
+        run: ./test/e2e/rewrite-examples.sh
       # make e2e = build + kind cluster with Crossplane + local provider deploy
       # + uptest over examples/. setup.sh creates the ProviderConfig from the
       # ADX_E2E_* variables (test/e2e/README.md).

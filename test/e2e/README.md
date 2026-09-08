@@ -49,6 +49,7 @@ make build            # builds the xpkg; load the image into kind and apply a Pr
 export ADX_E2E_CLUSTER_URI=https://mycluster.westeurope.kusto.windows.net
 export ADX_E2E_DATABASE=Telemetry
 export ADX_E2E_CLIENT_ID=... ADX_E2E_CLIENT_SECRET=... ADX_E2E_TENANT_ID=...
+./test/e2e/rewrite-examples.sh   # only if ADX_E2E_DATABASE is not "Telemetry"
 ./test/e2e/setup.sh
 make e2e
 ```
