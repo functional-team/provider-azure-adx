@@ -93,6 +93,30 @@ type EntityGroup struct {
 	Entities []string `json:"Entities"`
 }
 
+// UnmarshalJSON accepts both shapes an entity group has been seen in. The
+// service puts the entities array directly under the group name:
+//
+//	"EntityGroups": {"TelemetrySources": ["cluster('c').database('d')"]}
+//
+// (verified against a real cluster on 2026-09-08, which is what S4 assumed
+// wrongly). An object with Name and Entities is still accepted so a producer
+// using that shape keeps working. Name stays empty for the array shape and is
+// filled from the map key in normalize.
+func (g *EntityGroup) UnmarshalJSON(b []byte) error {
+	var entities []string
+	if err := json.Unmarshal(b, &entities); err == nil {
+		g.Entities = entities
+		return nil
+	}
+	type plain EntityGroup
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+	*g = EntityGroup(p)
+	return nil
+}
+
 // Database is the parsed schema of one database.
 type Database struct {
 	Name              string                      `json:"Name"`
@@ -142,6 +166,13 @@ func normalize(d *Database) *Database {
 	}
 	if d.EntityGroups == nil {
 		d.EntityGroups = map[string]EntityGroup{}
+	}
+	// The array shape carries no name, so take it from the map key.
+	for name, g := range d.EntityGroups {
+		if g.Name == "" {
+			g.Name = name
+			d.EntityGroups[name] = g
+		}
 	}
 	return d
 }
