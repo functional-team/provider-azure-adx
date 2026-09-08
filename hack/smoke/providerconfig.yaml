@@ -1,0 +1,30 @@
+# Namespace, credentials and ProviderConfig with the names the files under
+# examples/ expect (namespace data-platform, ProviderConfig telemetry-prod).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-platform
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: data-platform
+  name: adx-sp
+type: Opaque
+stringData:
+  credentials: |
+    {"clientId":"REPLACE_CLIENT_ID","clientSecret":"REPLACE_CLIENT_SECRET","tenantId":"REPLACE_TENANT_ID"}
+---
+apiVersion: adx.functional.team/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: telemetry-prod
+  namespace: data-platform
+spec:
+  clusterUri: https://REPLACE_CLUSTER.REPLACE_REGION.kusto.windows.net
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: data-platform
+      name: adx-sp
+      key: credentials

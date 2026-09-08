@@ -57,6 +57,9 @@ spec:
     - name: ghcr-functional-team
 ```
 
+A step-by-step smoke test against a real cluster is in
+[`hack/smoke/README.md`](hack/smoke/README.md).
+
 ## Connect to a cluster
 
 One `ProviderConfig` (namespaced) or `ClusterProviderConfig` (cluster-scoped) per
