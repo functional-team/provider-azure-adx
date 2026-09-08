@@ -5,7 +5,12 @@ name: E2E
 # federation on a service principal with AllDatabasesAdmin on the dev cluster;
 # no long-lived secret lives in the repository.
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      timeout:
+        description: 'uptest per-resource timeout (e.g. 300s for a quick diagnostic run)'
+        required: false
+        default: '1800s'
   schedule:
     - cron: '0 2 * * *'
 
@@ -58,15 +63,53 @@ jobs:
       - name: Run e2e (build, kind, deploy, uptest)
         env:
           BUILD_ARGS: "--load"
+          UPTEST_DEFAULT_TIMEOUT: ${{ inputs.timeout || '1800s' }}
           ADX_E2E_CLUSTER_URI: ${{ secrets.ADX_E2E_CLUSTER_URI }}
           ADX_E2E_DATABASE: ${{ secrets.ADX_E2E_DATABASE }}
           ADX_E2E_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ADX_E2E_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ADX_E2E_CLIENT_SECRET: ${{ secrets.ADX_E2E_CLIENT_SECRET }}
         run: make e2e
+      # Printed into the job log rather than only dumped to disk: a failing run
+      # is useless to debug afterwards because the runner (and with it the kind
+      # cluster) is gone. "get managed" answers the first question every time --
+      # is one kind stuck or all of them?
+      - name: Provider diagnostics
+        if: failure()
+        run: |
+          KUBECTL="$(ls .cache/tools/*/kubectl-* 2>/dev/null | head -1 || true)"
+          [ -x "$KUBECTL" ] || KUBECTL=kubectl
+          echo "::group::Managed resources (READY/SYNCED)"
+          $KUBECTL get managed -A || true
+          echo "::endgroup::"
+          echo "::group::Pods in crossplane-system"
+          $KUBECTL -n crossplane-system get pods -o wide || true
+          echo "::endgroup::"
+          echo "::group::Provider package and revision"
+          $KUBECTL get providers.pkg.crossplane.io,providerrevisions.pkg.crossplane.io -o wide || true
+          echo "::endgroup::"
+          echo "::group::CRDs: Established condition"
+          $KUBECTL get crd -o json \
+            | jq -r '.items[] | select(.spec.group | test("adx[.]functional[.]team")) | [.metadata.name, (.status.conditions[]? | select(.type == "Established") | .status), .metadata.creationTimestamp] | @tsv' || true
+          echo "::endgroup::"
+          echo "::group::Provider logs"
+          $KUBECTL -n crossplane-system logs -l pkg.crossplane.io/provider=provider-azure-adx \
+            --tail=2000 --all-containers --prefix --ignore-errors || true
+          echo "::endgroup::"
+          echo "::group::EntityGroup telemetry-sources"
+          $KUBECTL -n data-platform get entitygroup telemetry-sources -o yaml || true
+          echo "::endgroup::"
       - name: Collect diagnostics
         if: failure()
         run: make controlplane.dump || true
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: controlplane-dump
+          path: _output/controlplane-dump
+          retention-days: 7
+          if-no-files-found: warn
       - name: Stop dev cluster
         if: always()
         run: |
