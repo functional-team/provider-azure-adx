@@ -41,6 +41,22 @@ spec:
   package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
 ```
 
+While the package is private, the `crossplane-system` namespace needs a pull
+secret with a GitHub token that has `read:packages`, referenced via
+`spec.packagePullSecrets`:
+
+```sh
+kubectl -n crossplane-system create secret docker-registry ghcr-functional-team \
+  --docker-server=ghcr.io --docker-username=<github-user> --docker-password=<token>
+```
+
+```yaml
+spec:
+  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
+  packagePullSecrets:
+    - name: ghcr-functional-team
+```
+
 ## Connect to a cluster
 
 One `ProviderConfig` (namespaced) or `ClusterProviderConfig` (cluster-scoped) per

@@ -20,6 +20,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/functional-team/provider-azure-adx/internal/clients/kusto/cmd"
@@ -42,6 +43,9 @@ func TestClientSmoke(t *testing.T) {
 func TestErrorClassification(t *testing.T) {
 	ctx := context.Background()
 	_, err := kc.Mgmt(ctx, db, cmd.New(".show table ", cmd.Ident("DoesNotExist"), " cslschema"))
+	// Recorded for S11: the emulator answers HTTP 200 with a v1 `Exceptions`
+	// array here, a real cluster is expected to answer HTTP 400.
+	t.Logf("S11: missing-table response: %T: %v", errors.Unwrap(err), err)
 	if got := kerrors.Classify(err); got != kerrors.NotFound {
 		t.Errorf("missing table: Classify = %s (%+v)", got, kerrors.Details(err))
 	}

@@ -165,8 +165,7 @@ jobs:
           name: output
           path: _output/**
       # Pre-release builds from main land under ghcr.io as <branch> channel
-      # tags. No public release happens before the API group question is
-      # settled (docs/tech-implement.md, F20).
+      # tags; the package stays private until the first public release.
       - name: Publish Artifacts
         if: github.event_name != 'pull_request'
         run: make publish BRANCH_NAME=${GITHUB_REF##*/}

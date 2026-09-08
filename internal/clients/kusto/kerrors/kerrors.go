@@ -77,9 +77,26 @@ func Details(err error) Detail {
 		d.StatusCode = httpErr.StatusCode
 		fill(&d, httpErr.UnmarshalREST())
 	case errors.As(err, &kErr):
-		fill(&d, kErr.UnmarshalREST())
+		if m := kErr.UnmarshalREST(); m != nil {
+			fill(&d, m)
+		} else {
+			// No REST body: the v1 endpoint can answer HTTP 200 with an
+			// `Exceptions` array (observed on the emulator for `.show table X`
+			// on a missing table). The SDK folds that into the message, so
+			// the message is all we have to classify on.
+			d.Message = messageOf(kErr)
+		}
 	}
 	return d
+}
+
+// messageOf returns the wrapped message of a *kustoerrors.Error without the
+// Op/Kind prefix the SDK adds in Error().
+func messageOf(e *kustoerrors.Error) string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return e.Error()
 }
 
 func fill(d *Detail, m map[string]interface{}) {
@@ -168,6 +185,11 @@ func Classify(err error) Class { //nolint:gocyclo // A flat decision table is ea
 		}
 		if strings.Contains(strings.ToLower(kErr.Error()), "throttl") {
 			return Throttled
+		}
+		// A v1 `Exceptions` frame is a command-level failure delivered with
+		// HTTP 200; the SDK files it as KInternal. Retrying does not help.
+		if kErr.Kind == kustoerrors.KInternal && strings.HasPrefix(messageOf(kErr), "exceptions:") {
+			return Permanent
 		}
 		if kustoerrors.Retry(err) {
 			return Transient

@@ -8,15 +8,16 @@ integration or e2e suite. Date: 2026-09-07.
 | # | Question | Status | Where it matters |
 |---|---|---|---|
 | S1 | Does `azkustodata` accept `http://localhost` without auth? | **Answered (code).** Yes: no token provider means no trusted-endpoint check; a token provider over http is refused by the SDK. `TestNewEmulatorNoAuth`. | Emulator tests |
-| S2 | Exact `error.code` for "already exists" | **Open (emulator).** `kerrors` matches `*AlreadyExists*`, `*Conflict*` codes/types and "already exists" messages; the integration test records the raw code. `.create table` is idempotent anyway (S10). | `kerrors.Classify` |
-| S3 | `.show table * policy <p>` for all Tier 1 policies | **Open (emulator), mitigated.** Only `update` is documented. The controller tries the wildcard once per kind and falls back to single `.show` on a permanent error. Integration test logs which path was taken. | Batch observe |
+| S2 | Exact `error.code` for "already exists" | **Answered (emulator, 2026-09-08).** `.create function` on an existing function returns HTTP 400, `code="BadRequest"`, `@type="Kusto.Common.Svc.Exceptions.EntityAlreadyExistsException"`, message "Entity 'X' of kind 'ExpressionFunction' already exists." `kerrors` classifies it as AlreadyExists via the type/message match. | `kerrors.Classify` |
+| S3 | `.show table * policy <p>` for all Tier 1 policies | **Answered for retention (emulator, 2026-09-08).** `.show table * policy retention` works; one batch command served 50 resources. Other policy kinds still take the wildcard-then-fallback path until observed. | Batch observe |
 | S4 | Does `.show database schema as json` carry Folder/DocString/CslType? | **Assumed yes (schema fixture).** Parser is tolerant: missing `CslType` falls back to `Type` (.NET name mapping), missing Folder/DocString are empty strings. Confirm with the emulator. | Table observe |
 | S5 | Where is a function's `view` flag observable? | **Not observable.** `view` is write-only; documented on the field. | Function |
 | S6 | Exact `Role` strings in `.show ... principals` | **Open (cluster).** Matching is by the singular role word, case-insensitive. Only testable against a real cluster (emulator has no auth). | SecurityRole |
 | S7 | Which commands run in the emulator? | **Open (emulator).** Integration suite covers Table, Function, policies; external tables/continuous exports are skipped there. | Test matrix |
 | S8 | Detect two MRs on the same cluster policy | **Partially.** Owner annotation is set on Create; a second MR is not blocked, documented as user error. | Tier 2 |
 | S9 | contrib convention for namespaced groups (`.m.` infix) | **Closed (decision 2026-09-07).** The provider stays under github.com/functional-team with API groups under `functional.team` (`adx.functional.team`, `policy.adx.functional.team`, ...). No crossplane-contrib transfer is planned, so the `.m.` question does not arise. | API groups |
-| S10 | `.create table` on an existing table | **Answered (docs).** Returns success without changing the table. | Create race |
+| S10 | `.create table` on an existing table | **Answered (docs + emulator, 2026-09-08).** Returns success without changing the table. | Create race |
+| S11 | Error shape for `.show table X ...` on a missing table | **Answered (emulator, 2026-09-08), open for the real service.** The emulator answers HTTP 200 with a v1 `Exceptions` array; the SDK folds it into a `KInternal` error without REST body. `kerrors.Details` now falls back to that message and classifies by text; a real cluster is expected to answer HTTP 400 with `EntityNotFound`, which the same matcher covers. | `kerrors.Classify` |
 
 Additional unverified assumptions collected while implementing (all marked in
 code comments):

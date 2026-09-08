@@ -93,6 +93,13 @@ func TestClassifyNonHTTP(t *testing.T) {
 		"plainThrottled": {errors.New("request was throttled by the cluster"), Throttled},
 		"plainUnknown":   {errors.New("something odd"), Unknown},
 		"otherRetryable": {kustoerrors.ES(kustoerrors.OpMgmt, kustoerrors.KHTTPError, "gateway hiccup"), Transient},
+		// HTTP 200 with a v1 `Exceptions` array, as the emulator answers `.show table X` for a missing table.
+		"v1ExceptionsNotFound": {kustoerrors.ES(kustoerrors.OpMgmt, kustoerrors.KInternal, "exceptions: %v",
+			[]string{"Kusto.Data.Exceptions.EntityNotFoundException: Entity 'X' of kind 'Table' was not found."}), NotFound},
+		"v1ExceptionsExists": {kustoerrors.ES(kustoerrors.OpMgmt, kustoerrors.KInternal, "exceptions: %v",
+			[]string{"Entity 'F' of kind 'ExpressionFunction' already exists."}), AlreadyExists},
+		"v1ExceptionsOther": {kustoerrors.ES(kustoerrors.OpMgmt, kustoerrors.KInternal, "exceptions: %v",
+			[]string{"Semantic error: 'bad' has the following semantic error: ..."}), Permanent},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
