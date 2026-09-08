@@ -13,6 +13,10 @@ set -euo pipefail
 : "${ADX_E2E_TENANT_ID:?ADX_E2E_TENANT_ID is required}"
 ADX_E2E_DATABASE="${ADX_E2E_DATABASE:-Telemetry}"
 
+# uptest/chainsaw runs this script from a scratch directory, not the repo
+# root, so "examples" must be resolved relative to the script itself.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 kubectl create namespace data-platform --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl -n data-platform create secret generic adx-sp \
@@ -38,7 +42,7 @@ YAML
 # The examples use the database "Telemetry"; rewrite them when the dev
 # cluster uses another name.
 if [ "${ADX_E2E_DATABASE}" != "Telemetry" ]; then
-  find examples -name '*.yaml' -not -path 'examples/provider/*' -exec sed -i "s/database: Telemetry/database: ${ADX_E2E_DATABASE}/g" {} +
+  find "${REPO_ROOT}/examples" -name '*.yaml' -not -path "${REPO_ROOT}/examples/provider/*" -exec sed -i "s/database: Telemetry/database: ${ADX_E2E_DATABASE}/g" {} +
 fi
 
 echo "e2e setup done: ProviderConfig telemetry-prod -> ${ADX_E2E_CLUSTER_URI} (database ${ADX_E2E_DATABASE})"
