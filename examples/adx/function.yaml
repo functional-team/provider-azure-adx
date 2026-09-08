@@ -1,0 +1,19 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: Function
+metadata:
+  name: error-events
+  namespace: data-platform
+spec:
+  forProvider:
+    name: ErrorEvents
+    database: Telemetry
+    parameters: "(limit:long = 100)"
+    body: |
+      RawEvents
+      | where Payload.level == "Error"
+      | take limit
+    folder: Parsing
+    docstring: Error events from the landing table
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

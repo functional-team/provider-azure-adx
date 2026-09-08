@@ -1,0 +1,34 @@
+name: DCO
+
+# Every commit in a pull request must carry a Developer Certificate of Origin
+# sign-off (git commit -s). Implemented as a plain shell check so no
+# third-party action is needed.
+on:
+  pull_request: {}
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check Signed-off-by
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=0
+          for c in $(git rev-list "$base".."$head"); do
+            if ! git log -1 --format=%B "$c" | grep -qE '^Signed-off-by: .+ <.+@.+>$'; then
+              echo "::error::commit $c has no Signed-off-by line"
+              git log -1 --format='%h %s' "$c"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Sign your commits with 'git commit -s' (see DCO)."
+            exit 1
+          fi
+          echo "All commits are signed off."

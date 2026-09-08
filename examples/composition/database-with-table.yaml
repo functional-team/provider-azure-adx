@@ -1,0 +1,211 @@
+# End-to-end composition: an Azure Data Explorer database managed by
+# provider-upbound-azure (ARM), a ProviderConfig of this provider pointing at
+# the cluster, a landing table and an update policy feeding a parsed table.
+#
+# The database name is patched as a plain string into the ADX resources (F10):
+# the ADX provider cannot reference the upbound Database MR because it lives in
+# a different provider's scheme.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: telemetrystores.platform.example.org
+spec:
+  scope: Namespaced
+  group: platform.example.org
+  names:
+    kind: TelemetryStore
+    plural: telemetrystores
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                clusterName:
+                  type: string
+                clusterUri:
+                  type: string
+                resourceGroup:
+                  type: string
+                location:
+                  type: string
+                database:
+                  type: string
+              required: [clusterName, clusterUri, resourceGroup, location, database]
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: telemetrystore-adx
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.org/v1alpha1
+    kind: TelemetryStore
+  mode: Pipeline
+  pipeline:
+    - step: resources
+      functionRef:
+        name: crossplane-contrib-function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # 1. The database itself (ARM) stays with provider-upbound-azure.
+          - name: database
+            base:
+              apiVersion: kusto.azure.m.upbound.io/v1beta1
+              kind: Database
+              spec:
+                forProvider:
+                  hotCachePeriod: P31D
+                  softDeletePeriod: P365D
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.database
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.clusterName
+                toFieldPath: spec.forProvider.clusterName
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.resourceGroup
+                toFieldPath: spec.forProvider.resourceGroupName
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.location
+                toFieldPath: spec.forProvider.location
+          # 2. One ProviderConfig per cluster for this provider (F5).
+          - name: adx-providerconfig
+            base:
+              apiVersion: adx.functional.team/v1alpha1
+              kind: ProviderConfig
+              spec:
+                credentials:
+                  source: WorkloadIdentity
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.clusterUri
+                toFieldPath: spec.clusterUri
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-adx"
+          # 3. Landing table.
+          - name: raw-events
+            base:
+              apiVersion: adx.functional.team/v1alpha1
+              kind: Table
+              spec:
+                forProvider:
+                  name: RawEvents
+                  columns:
+                    - name: Timestamp
+                      type: datetime
+                    - name: Payload
+                      type: dynamic
+                  folder: Raw
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.database
+                toFieldPath: spec.forProvider.database
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-adx"
+          # 4. Parsed table fed by an update policy.
+          - name: parsed-events
+            base:
+              apiVersion: adx.functional.team/v1alpha1
+              kind: Table
+              spec:
+                forProvider:
+                  name: ParsedEvents
+                  columns:
+                    - name: Timestamp
+                      type: datetime
+                    - name: DeviceId
+                      type: string
+                    - name: Level
+                      type: string
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.database
+                toFieldPath: spec.forProvider.database
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-adx"
+          - name: parse-function
+            base:
+              apiVersion: adx.functional.team/v1alpha1
+              kind: Function
+              spec:
+                forProvider:
+                  name: ParseRawEvents
+                  body: |
+                    RawEvents
+                    | project Timestamp, DeviceId = tostring(Payload.deviceId), Level = tostring(Payload.level)
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.database
+                toFieldPath: spec.forProvider.database
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-adx"
+          - name: parsed-events-update-policy
+            base:
+              apiVersion: policy.adx.functional.team/v1alpha1
+              kind: UpdatePolicy
+              spec:
+                forProvider:
+                  entity:
+                    kind: Table
+                    name: ParsedEvents
+                  updates:
+                    - source: RawEvents
+                      query: ParseRawEvents()
+                      transactional: false
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.database
+                toFieldPath: spec.forProvider.database
+              - type: FromCompositeFieldPath
+                fromFieldPath: metadata.name
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-adx"
+---
+apiVersion: platform.example.org/v1alpha1
+kind: TelemetryStore
+metadata:
+  name: telemetry-prod
+  namespace: data-platform
+spec:
+  clusterName: telemetry-prod
+  clusterUri: https://telemetry-prod.westeurope.kusto.windows.net
+  resourceGroup: rg-telemetry
+  location: westeurope
+  database: Telemetry

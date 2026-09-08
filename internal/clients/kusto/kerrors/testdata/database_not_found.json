@@ -1,0 +1,1 @@
+{"error":{"code":"BadRequest_EntityNotFound","message":"Request is invalid and cannot be executed.","@type":"Kusto.Data.Exceptions.EntityNotFoundException","@message":"Entity ID 'Telemetry' of kind 'Database' was not found.","@permanent":true}}

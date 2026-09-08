@@ -1,0 +1,17 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: MergePolicy
+metadata:
+  name: telemetry-merge
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Database
+    maxExtentsToMerge: 100
+    loopPeriod: 1h
+    allowRebuild: true
+    allowMerge: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

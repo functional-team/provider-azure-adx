@@ -1,0 +1,18 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: ManagedIdentityPolicy
+metadata:
+  name: telemetry-managed-identity
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Database
+    identities:
+      - objectId: system
+        allowedUsages:
+          - NativeIngestion
+          - ExternalTable
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

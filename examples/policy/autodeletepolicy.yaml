@@ -1,0 +1,16 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: AutoDeletePolicy
+metadata:
+  name: staging-autodelete
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: StagingEvents
+    expiryDate: "2030-01-01"
+    deleteIfNotEmpty: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

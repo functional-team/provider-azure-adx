@@ -1,0 +1,1 @@
+{"error":{"code":"BadRequest_EntityAlreadyExists","message":"Request is invalid and cannot be executed.","@type":"Kusto.Data.Exceptions.EntityAlreadyExistsException","@message":"Entity 'F' of kind 'Function' already exists.","@permanent":true}}

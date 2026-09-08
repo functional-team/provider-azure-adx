@@ -1,0 +1,1 @@
+{"error":{"code":"Forbidden","message":"Caller is not authorized to perform this action","@type":"Kusto.DataNode.Exceptions.UnauthorizedDatabaseAccessException","@message":"Principal 'aadapp=0000' is not authorized to perform operation 'TableCreate' on 'Telemetry'.","@permanent":true}}

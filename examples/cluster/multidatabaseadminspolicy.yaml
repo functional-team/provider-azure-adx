@@ -1,0 +1,13 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: MultiDatabaseAdminsPolicy
+metadata:
+  name: multi-database-admins
+  namespace: data-platform
+spec:
+  forProvider:
+    principals:
+      - "aadgroup=data-platform-admins;contoso.com"
+      - "aadapp=4c7e82bd-6adb-46c3-b413-fdd44834c69b;72f988bf-86f1-41af-91ab-2d7cd011db47"
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

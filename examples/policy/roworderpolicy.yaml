@@ -1,0 +1,19 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: RowOrderPolicy
+metadata:
+  name: raw-events-roworder
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    columns:
+      - name: DeviceId
+        direction: asc
+      - name: Timestamp
+        direction: desc
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

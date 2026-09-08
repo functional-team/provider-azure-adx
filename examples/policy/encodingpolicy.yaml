@@ -1,0 +1,16 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: EncodingPolicy
+metadata:
+  name: raw-events-payload-encoding
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    column: Payload
+    type: BigObject32
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

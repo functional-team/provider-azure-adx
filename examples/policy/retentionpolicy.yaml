@@ -1,0 +1,17 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: RetentionPolicy
+metadata:
+  name: raw-events-retention
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      nameRef:
+        name: raw-events
+    softDeletePeriod: 365d
+    recoverability: Enabled
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

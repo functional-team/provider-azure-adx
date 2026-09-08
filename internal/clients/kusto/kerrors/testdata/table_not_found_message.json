@@ -1,0 +1,1 @@
+{"error":{"code":"General_BadRequest","message":"Request is invalid and cannot be executed.","@type":"Kusto.Data.Exceptions.KustoBadRequestException","@message":"Table 'RawEvents' could not be found.","@permanent":true}}

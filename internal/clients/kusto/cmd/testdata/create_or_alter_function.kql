@@ -1,0 +1,4 @@
+.create-or-alter function with (docstring="d", folder="f", skipvalidation=false) ['F'](limit:long = 100) {
+RawEvents
+| take limit
+}

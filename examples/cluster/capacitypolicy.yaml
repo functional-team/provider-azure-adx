@@ -1,0 +1,21 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: CapacityPolicy
+metadata:
+  name: capacity
+  namespace: data-platform
+spec:
+  forProvider:
+    # Only the keys given here are compared and altered; everything else keeps
+    # the cluster defaults. The policy cannot be deleted.
+    policy:
+      IngestionCapacity:
+        ClusterMaximumConcurrentOperations: 512
+        CoreUtilizationCoefficient: 0.75
+      ExportCapacity:
+        ClusterMaximumConcurrentOperations: 100
+        CoreUtilizationCoefficient: 0.25
+      MaterializedViewsCapacity:
+        ClusterMaximumConcurrentOperations: 1
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

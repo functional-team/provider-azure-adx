@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: exports-storage
+  namespace: data-platform
+type: Opaque
+stringData:
+  # Connection string with a SAS token. Write-only: sent obfuscated, never
+  # shown in status, events or logs. Prefer managed identity (see below).
+  connectionString: "https://acct2.blob.core.windows.net/exports;sv=2022-11-02&ss=b&sig=REPLACE_ME"
+---
+apiVersion: adx.functional.team/v1alpha1
+kind: ExternalTable
+metadata:
+  name: exports-parquet
+  namespace: data-platform
+spec:
+  forProvider:
+    name: ExportsParquet
+    database: Telemetry
+    kind: Storage
+    columns:
+      - name: Timestamp
+        type: datetime
+      - name: DeviceId
+        type: string
+      - name: Payload
+        type: dynamic
+    partitionBy: "Date:datetime = bin(Timestamp, 1d)"
+    pathFormat: "datetime_pattern(\"yyyy/MM/dd\", Date)"
+    dataFormat: parquet
+    connectionStrings:
+      # Managed identity of the cluster: no secret, fully comparable.
+      # Needs AllDatabasesAdmin for the provider principal and a
+      # ManagedIdentityPolicy that allows ExternalTable usage.
+      - value: "https://acct.blob.core.windows.net/exports;managed_identity=system"
+      # SAS token from a Secret (write-only).
+      - secretKeyRef:
+          name: exports-storage
+          key: connectionString
+    properties:
+      folder: External
+      docString: Parquet exports
+      compressed: true
+      compressionType: snappy
+      fileExtension: .parquet
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

@@ -1,0 +1,2 @@
+.create-or-alter continuous-export ['CE'] over (['T']) to table ['E'] with (forcedLatency=10m, intervalBetweenRuns=1h)
+<| T | where Level == "Error"

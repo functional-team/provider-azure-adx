@@ -1,0 +1,16 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: QueryWeakConsistencyPolicy
+metadata:
+  name: query-weak-consistency
+  namespace: data-platform
+spec:
+  forProvider:
+    percentageOfNodes: 20
+    minimumNumberOfNodes: 2
+    maximumNumberOfNodes: 10
+    enableMetadataPrefetch: false
+    maximumLagAllowedInMinutes: 5
+    refreshPeriodInSeconds: 120
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

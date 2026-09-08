@@ -1,0 +1,1 @@
+.create table ['Raw Events'] (['Timestamp']:datetime, ['Pay\'load']:dynamic) with (docstring="Landing \"table\"", folder="Raw")

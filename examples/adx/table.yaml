@@ -1,0 +1,28 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: Table
+metadata:
+  name: raw-events
+  namespace: data-platform
+  annotations:
+    # The Kusto name. Alternatively set spec.forProvider.name; metadata.name is
+    # only the fallback and is usually not a valid PascalCase Kusto name.
+    crossplane.io/external-name: RawEvents
+spec:
+  forProvider:
+    database: Telemetry
+    columns:
+      - name: Timestamp
+        type: datetime
+      - name: DeviceId
+        type: string
+      - name: Payload
+        type: dynamic
+        docstring: Raw JSON body
+    folder: Raw
+    docstring: Landing table for device events
+    # Merge (default) only adds columns; Replace drops columns missing from the
+    # spec together with their data.
+    schemaUpdateMode: Merge
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

@@ -1,0 +1,15 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: CachingPolicy
+metadata:
+  name: raw-events-caching
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    hot: 31d
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

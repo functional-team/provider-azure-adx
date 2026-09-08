@@ -1,0 +1,26 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: MaterializedView
+metadata:
+  name: latest-events
+  namespace: data-platform
+spec:
+  forProvider:
+    name: LatestEvents
+    database: Telemetry
+    sourceTableRef:
+      name: raw-events
+    query: |
+      RawEvents
+      | summarize arg_max(Timestamp, *) by DeviceId
+    # Create-only: backfill runs asynchronously; the resource stays in
+    # Creating (status.atProvider.operationId) until the operation completes.
+    backfill: true
+    effectiveDateTime: "2026-01-01T00:00:00Z"
+    lookback: 6h
+    autoUpdateSchema: false
+    folder: Views
+    docstring: Latest event per device
+    enabled: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

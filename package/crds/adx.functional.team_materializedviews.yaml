@@ -1,0 +1,458 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: materializedviews.adx.functional.team
+spec:
+  group: adx.functional.team
+  names:
+    categories:
+    - crossplane
+    - managed
+    - adx
+    kind: MaterializedView
+    listKind: MaterializedViewList
+    plural: materializedviews
+    singular: materializedview
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Synced')].status
+      name: SYNCED
+      type: string
+    - jsonPath: .metadata.annotations.crossplane\.io/external-name
+      name: EXTERNAL-NAME
+      type: string
+    - jsonPath: .spec.forProvider.database
+      name: DATABASE
+      type: string
+    - jsonPath: .status.atProvider.sourceTable
+      name: SOURCE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          A MaterializedView is a Kusto materialized view. With backfill the view is
+          created asynchronously; the resource stays in Creating until the backfill
+          operation completes. Deleting the managed resource drops the view.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: A MaterializedViewSpec defines the desired state of a MaterializedView.
+            properties:
+              forProvider:
+                description: MaterializedViewParameters are the configurable fields
+                  of a MaterializedView.
+                properties:
+                  allowMaterializedViewsWithoutRowLevelSecurity:
+                    description: |-
+                      AllowMaterializedViewsWithoutRowLevelSecurity allows creating the view
+                      over a source table with a row level security policy. Write-only.
+                    type: boolean
+                  autoUpdateSchema:
+                    description: AutoUpdateSchema propagates source schema changes
+                      to the view.
+                    type: boolean
+                  backfill:
+                    description: |-
+                      Backfill materializes existing source data. Create-only: the view is
+                      created asynchronously and the backfill operation is polled until it
+                      completes.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: backfill is create-only
+                      rule: self == oldSelf
+                  concurrency:
+                    description: Concurrency of the backfill. Create-only.
+                    format: int64
+                    type: integer
+                    x-kubernetes-validations:
+                    - message: concurrency is create-only
+                      rule: self == oldSelf
+                  database:
+                    description: Database that holds the view. Immutable.
+                    minLength: 1
+                    type: string
+                    x-kubernetes-validations:
+                    - message: database is immutable
+                      rule: self == oldSelf
+                  dimensionTables:
+                    description: |-
+                      DimensionTables are tables joined in the query that must not be treated
+                      as fact tables. Write-only: Kusto does not report them.
+                    items:
+                      type: string
+                    type: array
+                  docstring:
+                    description: Docstring of the view.
+                    type: string
+                  effectiveDateTime:
+                    description: |-
+                      EffectiveDateTime (ISO 8601) limits backfill to records ingested after
+                      this time. Create-only.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: effectiveDateTime is create-only
+                      rule: self == oldSelf
+                  enabled:
+                    description: |-
+                      Enabled toggles materialization (.enable/.disable materialized-view).
+                      Defaults to true.
+                    type: boolean
+                  folder:
+                    description: Folder of the view in the database tree.
+                    type: string
+                  lookback:
+                    description: |-
+                      Lookback limits the period of source data considered during
+                      materialization, e.g. "6h".
+                    minLength: 1
+                    type: string
+                  lookbackColumn:
+                    description: |-
+                      LookbackColumn is the datetime column the lookback applies to. Kusto
+                      does not allow changing it after it has been set.
+                    type: string
+                  maxSourceRecordsForSingleIngest:
+                    description: |-
+                      MaxSourceRecordsForSingleIngest caps the records per backfill ingest
+                      operation. Create-only.
+                    format: int64
+                    type: integer
+                    x-kubernetes-validations:
+                    - message: maxSourceRecordsForSingleIngest is create-only
+                      rule: self == oldSelf
+                  name:
+                    description: |-
+                      Name of the materialized view in Kusto. Written to the
+                      crossplane.io/external-name annotation on the first reconcile if that
+                      annotation is empty. Immutable.
+                    maxLength: 1024
+                    minLength: 1
+                    type: string
+                    x-kubernetes-validations:
+                    - message: name is immutable
+                      rule: self == oldSelf
+                  query:
+                    description: |-
+                      Query is the KQL aggregation query over the source. It is sent verbatim.
+                      Kusto only accepts limited changes to an existing view's query (no
+                      change of the group-by expressions, column names or types); rejected
+                      changes surface as Synced=False with the Kusto message.
+                    minLength: 1
+                    type: string
+                  sourceMaterializedView:
+                    description: |-
+                      SourceMaterializedView is another materialized view used as source
+                      (materialized view over materialized view). Immutable.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: sourceMaterializedView is immutable
+                      rule: self == oldSelf
+                  sourceTable:
+                    description: |-
+                      SourceTable the view is defined over. Immutable once set; changing the
+                      source means a new view.
+                    type: string
+                    x-kubernetes-validations:
+                    - message: sourceTable is immutable
+                      rule: self == oldSelf
+                  sourceTableRef:
+                    description: SourceTableRef references a Table managed resource
+                      as source.
+                    properties:
+                      name:
+                        description: Name of the referenced object.
+                        type: string
+                      namespace:
+                        description: Namespace of the referenced object
+                        type: string
+                      policy:
+                        description: Policies for referencing.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    required:
+                    - name
+                    type: object
+                  sourceTableSelector:
+                    description: SourceTableSelector selects a Table managed resource
+                      as source.
+                    properties:
+                      matchControllerRef:
+                        description: |-
+                          MatchControllerRef ensures an object with the same controller reference
+                          as the selecting object is selected.
+                        type: boolean
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: MatchLabels ensures an object with matching labels
+                          is selected.
+                        type: object
+                      namespace:
+                        description: Namespace for the selector
+                        type: string
+                      policy:
+                        description: Policies for selection.
+                        properties:
+                          resolution:
+                            default: Required
+                            description: |-
+                              Resolution specifies whether resolution of this reference is required.
+                              The default is 'Required', which means the reconcile will fail if the
+                              reference cannot be resolved. 'Optional' means this reference will be
+                              a no-op if it cannot be resolved.
+                            enum:
+                            - Required
+                            - Optional
+                            type: string
+                          resolve:
+                            description: |-
+                              Resolve specifies when this reference should be resolved. The default
+                              is 'IfNotPresent', which will attempt to resolve the reference only when
+                              the corresponding field is not present. Use 'Always' to resolve the
+                              reference on every reconcile.
+                            enum:
+                            - Always
+                            - IfNotPresent
+                            type: string
+                        type: object
+                    type: object
+                  updateExtentsCreationTime:
+                    description: |-
+                      UpdateExtentsCreationTime sets the creation time of backfilled extents
+                      to the ingestion time of the source records. Create-only.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: updateExtentsCreationTime is create-only
+                      rule: self == oldSelf
+                required:
+                - database
+                - query
+                type: object
+                x-kubernetes-validations:
+                - message: one of sourceTable, sourceTableRef, sourceTableSelector
+                    or sourceMaterializedView is required
+                  rule: has(self.sourceTable) || has(self.sourceTableRef) || has(self.sourceTableSelector)
+                    || has(self.sourceMaterializedView)
+                - message: sourceMaterializedView and sourceTable are mutually exclusive
+                  rule: '!(has(self.sourceMaterializedView) && (has(self.sourceTable)
+                    || has(self.sourceTableRef) || has(self.sourceTableSelector)))'
+              managementPolicies:
+                default:
+                - '*'
+                description: |-
+                  THIS IS A BETA FIELD. It is on by default but can be opted out
+                  through a Crossplane feature flag.
+                  ManagementPolicies specify the array of actions Crossplane is allowed to
+                  take on the managed and external resources.
+                  See the design doc for more information: https://github.com/crossplane/crossplane/blob/499895a25d1a1a0ba1604944ef98ac7a1a71f197/design/design-doc-observe-only-resources.md?plain=1#L223
+                  and this one: https://github.com/crossplane/crossplane/blob/444267e84783136daa93568b364a5f01228cacbe/design/one-pager-ignore-changes.md
+                items:
+                  description: |-
+                    A ManagementAction represents an action that the Crossplane controllers
+                    can take on an external resource.
+                  enum:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                  - '*'
+                  type: string
+                type: array
+              providerConfigRef:
+                default:
+                  kind: ClusterProviderConfig
+                  name: default
+                description: |-
+                  ProviderConfigReference specifies how the provider that will be used to
+                  create, observe, update, and delete this managed resource should be
+                  configured.
+                properties:
+                  kind:
+                    description: Kind of the referenced object.
+                    type: string
+                  name:
+                    description: Name of the referenced object.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              writeConnectionSecretToRef:
+                description: |-
+                  WriteConnectionSecretToReference specifies the namespace and name of a
+                  Secret to which any connection details for this managed resource should
+                  be written. Connection details frequently include the endpoint, username,
+                  and password required to connect to the managed resource.
+                properties:
+                  name:
+                    description: Name of the secret.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - forProvider
+            type: object
+          status:
+            description: A MaterializedViewStatus represents the observed state of
+              a MaterializedView.
+            properties:
+              atProvider:
+                description: MaterializedViewObservation are the observable fields
+                  of a MaterializedView.
+                properties:
+                  docstring:
+                    description: Docstring as reported by the cluster.
+                    type: string
+                  effectiveDateTime:
+                    description: EffectiveDateTime as reported by the cluster.
+                    type: string
+                  folder:
+                    description: Folder as reported by the cluster.
+                    type: string
+                  isEnabled:
+                    description: IsEnabled as reported by the cluster.
+                    type: boolean
+                  isHealthy:
+                    description: IsHealthy as reported by the cluster.
+                    type: boolean
+                  lastRunResult:
+                    description: LastRunResult of the materialization as reported
+                      by the cluster.
+                    type: string
+                  lookback:
+                    description: Lookback as reported by the cluster (.NET timespan
+                      format).
+                    type: string
+                  operationId:
+                    description: OperationID of a running backfill operation.
+                    type: string
+                  operationState:
+                    description: OperationState of the backfill operation (InProgress,
+                      Scheduled, ...).
+                    type: string
+                  query:
+                    description: Query as reported by the cluster (Kusto may reformat
+                      it).
+                    type: string
+                  sourceTable:
+                    description: SourceTable as reported by the cluster.
+                    type: string
+                type: object
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  description: A Condition that may apply to a resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        LastTransitionTime is the last time this condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A Message containing details about this condition's last transition from
+                        one status to another, if any.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: A Reason for this condition's last transition from
+                        one status to another.
+                      type: string
+                    status:
+                      description: Status of this condition; is it currently True,
+                        False, or Unknown?
+                      type: string
+                    type:
+                      description: |-
+                        Type of this condition. At most one of each condition type may apply to
+                        a resource at any point in time.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHandledReconcileAt:
+                description: |-
+                  LastHandledReconcileAt holds the value of the most recent
+                  reconcile-requested-at annotation token that the controller has
+                  processed. Users can compare this to the annotation to determine
+                  whether a reconcile request has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the latest metadata.generation
+                  which resulted in either a ready state, or stalled due to error
+                  it can not recover from without human intervention.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

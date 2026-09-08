@@ -1,0 +1,17 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: CalloutPolicy
+metadata:
+  name: callout
+  namespace: data-platform
+spec:
+  forProvider:
+    callouts:
+      - calloutType: sql
+        calloutUriRegex: '[a-z0-9]+\.database\.windows\.net/?$'
+        canCall: true
+      - calloutType: webapi
+        calloutUriRegex: '.*'
+        canCall: false
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

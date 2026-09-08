@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-platform
+---
+# Service principal credentials in the same JSON layout provider-upbound-azure
+# uses; extra keys such as subscriptionId are ignored.
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: data-platform
+  name: adx-sp
+type: Opaque
+stringData:
+  credentials: |
+    {"clientId":"00000000-0000-0000-0000-000000000000","clientSecret":"REPLACE_ME","tenantId":"00000000-0000-0000-0000-000000000000"}
+---
+apiVersion: adx.functional.team/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: telemetry-prod
+  namespace: data-platform
+spec:
+  clusterUri: https://telemetry-prod.westeurope.kusto.windows.net
+  azureEnvironment: AzurePublicCloud
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: data-platform
+      name: adx-sp
+      key: credentials
+---
+# Cluster-scoped variant using AKS workload identity; the client id, tenant id
+# and token file default to the AZURE_* environment variables injected by the
+# workload identity webhook.
+apiVersion: adx.functional.team/v1alpha1
+kind: ClusterProviderConfig
+metadata:
+  name: telemetry-prod
+spec:
+  clusterUri: https://telemetry-prod.westeurope.kusto.windows.net
+  credentials:
+    source: WorkloadIdentity
+---
+# Kusto emulator (integration tests). No credentials, http only.
+apiVersion: adx.functional.team/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: emulator
+  namespace: data-platform
+spec:
+  clusterUri: http://kustainer.default.svc:8080
+  credentials:
+    source: None

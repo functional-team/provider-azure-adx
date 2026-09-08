@@ -1,0 +1,21 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: UpdatePolicy
+metadata:
+  name: parsed-events-update
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: ParsedEvents
+    updates:
+      - source: RawEvents
+        sourceRef:
+          name: raw-events
+        query: ParseRawEvents()
+        transactional: false
+        propagateIngestionProperties: false
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

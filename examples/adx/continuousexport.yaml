@@ -1,0 +1,26 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: ContinuousExport
+metadata:
+  name: error-events-export
+  namespace: data-platform
+spec:
+  forProvider:
+    name: ErrorEventsExport
+    database: Telemetry
+    externalTableRef:
+      name: exports-parquet
+    overTablesRefs:
+      - name: raw-events
+    query: |
+      RawEvents
+      | where Payload.level == "Error"
+    intervalBetweenRuns: 1h
+    forcedLatency: 10m
+    sizeLimit: 104857600
+    distributed: true
+    # Needs a ManagedIdentityPolicy on the database allowing AutomatedFlows.
+    managedIdentity: system
+    enabled: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

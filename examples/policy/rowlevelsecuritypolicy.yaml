@@ -1,0 +1,16 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: RowLevelSecurityPolicy
+metadata:
+  name: raw-events-rls
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    enabled: true
+    query: RawEventsForCurrentUser()
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

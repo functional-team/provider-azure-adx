@@ -1,0 +1,41 @@
+apiVersion: security.adx.functional.team/v1alpha1
+kind: SecurityRole
+metadata:
+  name: raw-events-ingestors
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      nameRef:
+        name: raw-events
+    role: ingestors
+    # Authoritative (default) removes principals that are not listed here,
+    # including ones added by hand. Use Additive when several teams share a role.
+    mode: Authoritative
+    principals:
+      - "aadapp=4c7e82bd-6adb-46c3-b413-fdd44834c69b;72f988bf-86f1-41af-91ab-2d7cd011db47"
+      - "aadgroup=data-ingest;contoso.com"
+    description: managed by crossplane
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
+apiVersion: security.adx.functional.team/v1alpha1
+kind: SecurityRole
+metadata:
+  name: telemetry-viewers
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Database
+    role: viewers
+    mode: Additive
+    principals:
+      - "aaduser=alice@contoso.com"
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

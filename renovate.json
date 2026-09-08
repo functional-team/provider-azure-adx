@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "gomod",
+    "github-actions",
+    "custom.regex"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Kusto emulator image used by the integration tests",
+      "managerFilePatterns": ["/^test/emulator/emulator\\.go$/"],
+      "matchStrings": ["const Image = \"(?<depName>mcr\\.microsoft\\.com/azuredataexplorer/kustainer-linux):(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

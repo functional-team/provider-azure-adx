@@ -1,0 +1,1 @@
+{"error":{"code":"General_BadRequest","message":"Request is invalid and cannot be executed.","@type":"Kusto.Data.Exceptions.KustoBadRequestException","@message":"The materialized view query must use an aggregation with summarize.","@permanent":true}}

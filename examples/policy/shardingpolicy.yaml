@@ -1,0 +1,16 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: ShardingPolicy
+metadata:
+  name: raw-events-sharding
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    maxRowCount: 750000
+    maxExtentSizeInMb: 1024
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

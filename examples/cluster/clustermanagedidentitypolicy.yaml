@@ -1,0 +1,18 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: ClusterManagedIdentityPolicy
+metadata:
+  name: cluster-managed-identity
+  namespace: data-platform
+spec:
+  forProvider:
+    identities:
+      - objectId: system
+        allowedUsages:
+          - NativeIngestion
+          - ExternalTable
+      - objectId: 9ca5bb85-1c1f-44c3-b33a-0dfa46b7e76c
+        allowedUsages:
+          - DataConnection
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

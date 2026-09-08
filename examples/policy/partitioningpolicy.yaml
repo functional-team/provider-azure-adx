@@ -1,0 +1,29 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: PartitioningPolicy
+metadata:
+  name: raw-events-partitioning
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    partitionKeys:
+      - columnName: DeviceId
+        kind: Hash
+        properties:
+          function: XxHash64
+          maxPartitionCount: 128
+          seed: 1
+          partitionAssignmentMode: Uniform
+      - columnName: Timestamp
+        kind: UniformRange
+        properties:
+          reference: "1970-01-01T00:00:00"
+          rangeSize: 1d
+          overrideCreationTime: false
+    effectiveDateTime: "2026-01-01T00:00:00"
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

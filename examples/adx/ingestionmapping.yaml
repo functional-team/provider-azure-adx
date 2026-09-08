@@ -1,0 +1,26 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: IngestionMapping
+metadata:
+  name: raw-events-json
+  namespace: data-platform
+spec:
+  forProvider:
+    name: RawEventsJson
+    database: Telemetry
+    tableRef:
+      name: raw-events
+    kind: json
+    mapping:
+      - column: Timestamp
+        dataType: datetime
+        properties:
+          path: "$.ts"
+      - column: DeviceId
+        properties:
+          path: "$.device.id"
+      - column: Payload
+        properties:
+          path: "$"
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

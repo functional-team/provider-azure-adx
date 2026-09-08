@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+  pull_request: {}
+  workflow_dispatch: {}
+
+env:
+  # Common versions
+  GO_VERSION: '1.25.0'
+  GOLANGCI_VERSION: 'v2.12.2'
+  DOCKER_BUILDX_VERSION: 'v0.23.0'
+
+jobs:
+  detect-noop:
+    runs-on: ubuntu-latest
+    outputs:
+      noop: ${{ steps.noop.outputs.should_skip }}
+    steps:
+      - name: Detect No-op Changes
+        id: noop
+        uses: fkirc/skip-duplicate-actions@v5.3.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          paths_ignore: '["**.md", "**.png", "**.jpg"]'
+          do_not_skip: '["workflow_dispatch", "schedule", "push"]'
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download Go Modules
+        run: make modules.download modules.check
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: ${{ env.GOLANGCI_VERSION }}
+
+  check-diff:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download Go Modules
+        run: make modules.download modules.check
+      - name: Check Diff
+        id: check-diff
+        run: |
+          mkdir -p _output
+          make check-diff
+      - name: Show diff
+        if: failure() && steps.check-diff.outcome == 'failure'
+        run: git diff
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Fetch History
+        run: git fetch --prune --unshallow
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download Go Modules
+        run: make modules.download modules.check
+      - name: Run Unit Tests
+        run: make -j2 test
+      - name: Publish Unit Test Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          flags: unittests
+          file: _output/tests/linux_amd64/coverage.txt
+
+  # Integration tests against the Kusto emulator. The emulator only runs on
+  # linux/amd64, which is what ubuntu-latest provides; it is not runnable on
+  # Apple Silicon developer machines (docs/tech-implement.md, A3).
+  integration:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Pull Kusto emulator image
+        run: docker pull mcr.microsoft.com/azuredataexplorer/kustainer-linux:latest
+      - name: Run integration tests
+        run: go test -tags integration -count=1 -timeout 30m -v ./test/integration/...
+
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: ${{ env.DOCKER_BUILDX_VERSION }}
+          install: true
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+      - name: Fetch History
+        run: git fetch --prune --unshallow
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download Go Modules
+        run: make modules.download modules.check
+      - name: Build Artifacts
+        run: make -j2 build.all
+        env:
+          # docker buildx does not load the images it builds by default.
+          BUILD_ARGS: "--load"
+      - name: Publish Artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: output
+          path: _output/**
+      # Pre-release builds from main land under ghcr.io as <branch> channel
+      # tags. No public release happens before the API group question is
+      # settled (docs/tech-implement.md, F20).
+      - name: Publish Artifacts
+        if: github.event_name != 'pull_request'
+        run: make publish BRANCH_NAME=${GITHUB_REF##*/}

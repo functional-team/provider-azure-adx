@@ -1,0 +1,223 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: providerconfigs.adx.functional.team
+spec:
+  group: adx.functional.team
+  names:
+    categories:
+    - crossplane
+    - provider
+    - adx
+    kind: ProviderConfig
+    listKind: ProviderConfigList
+    plural: providerconfigs
+    singular: providerconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .spec.clusterUri
+      name: CLUSTER
+      type: string
+    - jsonPath: .spec.credentials.source
+      name: SOURCE
+      type: string
+    - jsonPath: .spec.credentials.secretRef.name
+      name: SECRET-NAME
+      priority: 1
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          A ProviderConfig configures how the provider connects to one Azure Data
+          Explorer cluster: the endpoint plus the identity used for management commands.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: A ProviderConfigSpec defines the desired state of a ProviderConfig.
+            properties:
+              azureEnvironment:
+                default: AzurePublicCloud
+                description: |-
+                  AzureEnvironment selects the sovereign cloud. Only AzurePublicCloud is
+                  tested; the others are wired through to the SDK but unverified.
+                enum:
+                - AzurePublicCloud
+                - AzureChinaCloud
+                - AzureUSGovernment
+                type: string
+              clusterUri:
+                description: |-
+                  ClusterURI is the Kusto query endpoint of the cluster, e.g.
+                  https://mycluster.westeurope.kusto.windows.net. Immutable.
+                pattern: ^https?://[^/\s]+/?$
+                type: string
+                x-kubernetes-validations:
+                - message: clusterUri is immutable
+                  rule: self == oldSelf
+              credentials:
+                description: Credentials required to authenticate to this provider.
+                properties:
+                  managedIdentity:
+                    description: ManagedIdentity settings, used when source is ManagedIdentity.
+                    properties:
+                      clientId:
+                        description: ClientID of a user-assigned identity. Mutually
+                          exclusive with resourceId.
+                        type: string
+                      resourceId:
+                        description: ResourceID of a user-assigned identity. Mutually
+                          exclusive with clientId.
+                        type: string
+                      type:
+                        default: SystemAssigned
+                        description: Type of the managed identity.
+                        enum:
+                        - SystemAssigned
+                        - UserAssigned
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  secretRef:
+                    description: |-
+                      SecretRef points to a Secret key holding a JSON document with the keys
+                      clientId, clientSecret and tenantId. The format is compatible with the
+                      credentials Secret of provider-upbound-azure (additional keys are ignored).
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: Name of the secret.
+                        type: string
+                      namespace:
+                        description: Namespace of the secret.
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
+                  source:
+                    description: Source of the provider credentials.
+                    enum:
+                    - None
+                    - Secret
+                    - WorkloadIdentity
+                    - ManagedIdentity
+                    type: string
+                  workloadIdentity:
+                    description: WorkloadIdentity settings, used when source is WorkloadIdentity.
+                    properties:
+                      clientId:
+                        description: ClientID of the federated application.
+                        type: string
+                      tenantId:
+                        description: TenantID of the federated application.
+                        type: string
+                      tokenFile:
+                        description: TokenFile is the path of the projected service
+                          account token.
+                        type: string
+                    type: object
+                required:
+                - source
+                type: object
+                x-kubernetes-validations:
+                - message: secretRef is required when source is Secret
+                  rule: self.source != 'Secret' || has(self.secretRef)
+                - message: managedIdentity is required when source is ManagedIdentity
+                  rule: self.source != 'ManagedIdentity' || has(self.managedIdentity)
+            required:
+            - clusterUri
+            - credentials
+            type: object
+            x-kubernetes-validations:
+            - message: credentials.source None is only allowed for http:// endpoints
+                (Kusto emulator)
+              rule: self.credentials.source != 'None' || self.clusterUri.startsWith('http://')
+          status:
+            description: A ProviderConfigStatus defines the status of a Provider.
+            properties:
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  description: A Condition that may apply to a resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        LastTransitionTime is the last time this condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A Message containing details about this condition's last transition from
+                        one status to another, if any.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: A Reason for this condition's last transition from
+                        one status to another.
+                      type: string
+                    status:
+                      description: Status of this condition; is it currently True,
+                        False, or Unknown?
+                      type: string
+                    type:
+                      description: |-
+                        Type of this condition. At most one of each condition type may apply to
+                        a resource at any point in time.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              users:
+                description: Users of this provider configuration.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

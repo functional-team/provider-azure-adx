@@ -1,0 +1,1 @@
+{"error":{"code":"General_InternalServerError","message":"An unexpected error occurred.","@type":"Kusto.Data.Exceptions.KustoServiceException","@message":"Internal server error.","@permanent":false}}

@@ -1,0 +1,1 @@
+{"error":{"code":"BadRequest_SyntaxError","message":"Request is invalid and cannot be executed.","@type":"Kusto.Data.Exceptions.SyntaxException","@message":"Syntax error: Query could not be parsed at 'take' on line [1,30]","@permanent":true}}

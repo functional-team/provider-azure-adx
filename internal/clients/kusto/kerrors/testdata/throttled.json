@@ -1,0 +1,1 @@
+{"error":{"code":"TooManyRequests","message":"The control command was aborted due to throttling. Retrying after some backoff might succeed. CommandType: 'TableShow', Capacity: 5, Origin: 'CapacityPolicy/Ingestion'.","@type":"Kusto.DataNode.Exceptions.ControlCommandThrottledException","@message":"The control command was aborted due to throttling.","@permanent":false}}

@@ -1,0 +1,30 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: WorkloadGroup
+metadata:
+  name: ingestion-workload-group
+  namespace: data-platform
+spec:
+  forProvider:
+    name: Ingestion
+    workloadGroup:
+      RequestLimitsPolicy:
+        DataScope:
+          IsRelaxable: true
+          Value: All
+        MaxMemoryPerQueryPerNode:
+          IsRelaxable: true
+          Value: 6442450944
+        MaxExecutionTime:
+          IsRelaxable: true
+          Value: "00:04:00"
+      RequestRateLimitPolicies:
+        - IsEnabled: true
+          Scope: WorkloadGroup
+          LimitKind: ConcurrentRequests
+          Properties:
+            MaxConcurrentRequests: 20
+      RequestQueuingPolicy:
+        IsEnabled: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

@@ -1,0 +1,15 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: RequestClassificationPolicy
+metadata:
+  name: request-classification
+  namespace: data-platform
+spec:
+  forProvider:
+    enabled: true
+    query: |
+      case(request_properties.current_application == "Kusto.Explorer" and request_properties.request_type == "Query", "Ad-hoc queries",
+           request_properties.current_principal has "aadapp=4c7e82bd-6adb-46c3-b413-fdd44834c69b", "Ingestion",
+           "default")
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

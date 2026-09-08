@@ -1,0 +1,445 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: externaltables.adx.functional.team
+spec:
+  group: adx.functional.team
+  names:
+    categories:
+    - crossplane
+    - managed
+    - adx
+    kind: ExternalTable
+    listKind: ExternalTableList
+    plural: externaltables
+    singular: externaltable
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Synced')].status
+      name: SYNCED
+      type: string
+    - jsonPath: .metadata.annotations.crossplane\.io/external-name
+      name: EXTERNAL-NAME
+      type: string
+    - jsonPath: .spec.forProvider.database
+      name: DATABASE
+      type: string
+    - jsonPath: .spec.forProvider.kind
+      name: KIND
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          An ExternalTable is a Kusto external table over blob/ADLS storage or a
+          Delta Lake table. Secrets in connection strings are write-only; prefer
+          managed identity (";managed_identity=system"). Creating an external table
+          with a managed identity requires the AllDatabasesAdmin role.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: An ExternalTableSpec defines the desired state of an ExternalTable.
+            properties:
+              forProvider:
+                description: ExternalTableParameters are the configurable fields of
+                  an ExternalTable.
+                properties:
+                  columns:
+                    description: |-
+                      Columns of the external table. Required for Storage; optional for Delta
+                      (schema is inferred from the delta log when omitted).
+                    items:
+                      description: Column is one column of a table schema.
+                      properties:
+                        docstring:
+                          description: Docstring of the column.
+                          type: string
+                        name:
+                          description: Name of the column.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                        type:
+                          description: Type of the column.
+                          enum:
+                          - bool
+                          - boolean
+                          - datetime
+                          - date
+                          - dynamic
+                          - guid
+                          - uuid
+                          - uniqueid
+                          - int
+                          - long
+                          - real
+                          - double
+                          - decimal
+                          - string
+                          - timespan
+                          - time
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  connectionStrings:
+                    description: ConnectionStrings of the storage containers, at least
+                      one.
+                    items:
+                      description: |-
+                        ExternalTableConnectionString is one storage connection string. Exactly one
+                        of value and secretKeyRef must be set. Connection strings are always sent
+                        obfuscated (h@'...') so Kusto hides everything after the first ';' in .show
+                        output and command logs; only the URI part is compared and reported.
+                      properties:
+                        secretKeyRef:
+                          description: |-
+                            SecretKeyRef reads the connection string (with SAS token or account
+                            key) from a Secret. Write-only: a changed secret is detected through a
+                            hash, the value never appears in status, events or logs.
+                          properties:
+                            key:
+                              description: Key to select.
+                              minLength: 1
+                              type: string
+                            name:
+                              description: Name of the secret.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace of the secret; defaults to the
+                                namespace of the managed resource.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        value:
+                          description: |-
+                            Value is the connection string, e.g.
+                            "https://acct.blob.core.windows.net/exports;managed_identity=system".
+                            Use it for identity based access without secrets.
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: exactly one of value and secretKeyRef must be set
+                        rule: has(self.value) != has(self.secretKeyRef)
+                    minItems: 1
+                    type: array
+                  dataFormat:
+                    description: DataFormat of the files (Storage kind).
+                    enum:
+                    - csv
+                    - tsv
+                    - tsve
+                    - psv
+                    - scsv
+                    - sohsv
+                    - json
+                    - multijson
+                    - avro
+                    - apacheavro
+                    - parquet
+                    - orc
+                    - w3clogfile
+                    - txt
+                    - raw
+                    - sstream
+                    type: string
+                  database:
+                    description: Database that holds the external table. Immutable.
+                    minLength: 1
+                    type: string
+                    x-kubernetes-validations:
+                    - message: database is immutable
+                      rule: self == oldSelf
+                  kind:
+                    default: Storage
+                    description: Kind of the external table. Immutable.
+                    enum:
+                    - Storage
+                    - Delta
+                    type: string
+                    x-kubernetes-validations:
+                    - message: kind is immutable
+                      rule: self == oldSelf
+                  name:
+                    description: |-
+                      Name of the external table in Kusto. Written to the
+                      crossplane.io/external-name annotation on the first reconcile if that
+                      annotation is empty. Immutable.
+                    maxLength: 1024
+                    minLength: 1
+                    type: string
+                    x-kubernetes-validations:
+                    - message: name is immutable
+                      rule: self == oldSelf
+                  partitionBy:
+                    description: |-
+                      PartitionBy is the raw Kusto partition expression, e.g.
+                      "Date:datetime = bin(Timestamp, 1d)". Compared through the hash
+                      mechanism because Kusto reports partitions as JSON.
+                    type: string
+                  pathFormat:
+                    description: |-
+                      PathFormat is the raw Kusto path format expression, e.g.
+                      "datetime_pattern(\"yyyy/MM/dd\", Date)".
+                    type: string
+                  properties:
+                    description: Properties are the optional "with (...)" settings.
+                    properties:
+                      compressed:
+                        description: Compressed marks the files as compressed.
+                        type: boolean
+                      compressionType:
+                        description: CompressionType, e.g. gzip or snappy.
+                        type: string
+                      docString:
+                        description: DocString of the external table.
+                        type: string
+                      encoding:
+                        description: Encoding of text files, e.g. UTF8NoBOM.
+                        type: string
+                      fileExtension:
+                        description: FileExtension of the files, e.g. ".parquet".
+                        type: string
+                      folder:
+                        description: Folder of the external table in the database
+                          tree.
+                        type: string
+                      includeHeaders:
+                        description: 'IncludeHeaders for delimited formats: None,
+                          All or FirstFile.'
+                        enum:
+                        - None
+                        - All
+                        - FirstFile
+                        type: string
+                      namePrefix:
+                        description: NamePrefix of exported files.
+                        type: string
+                    type: object
+                required:
+                - connectionStrings
+                - database
+                type: object
+                x-kubernetes-validations:
+                - message: columns are required for kind Storage
+                  rule: self.kind != 'Storage' || (has(self.columns) && size(self.columns)
+                    > 0)
+                - message: dataFormat is required for kind Storage
+                  rule: self.kind != 'Storage' || has(self.dataFormat)
+              managementPolicies:
+                default:
+                - '*'
+                description: |-
+                  THIS IS A BETA FIELD. It is on by default but can be opted out
+                  through a Crossplane feature flag.
+                  ManagementPolicies specify the array of actions Crossplane is allowed to
+                  take on the managed and external resources.
+                  See the design doc for more information: https://github.com/crossplane/crossplane/blob/499895a25d1a1a0ba1604944ef98ac7a1a71f197/design/design-doc-observe-only-resources.md?plain=1#L223
+                  and this one: https://github.com/crossplane/crossplane/blob/444267e84783136daa93568b364a5f01228cacbe/design/one-pager-ignore-changes.md
+                items:
+                  description: |-
+                    A ManagementAction represents an action that the Crossplane controllers
+                    can take on an external resource.
+                  enum:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                  - '*'
+                  type: string
+                type: array
+              providerConfigRef:
+                default:
+                  kind: ClusterProviderConfig
+                  name: default
+                description: |-
+                  ProviderConfigReference specifies how the provider that will be used to
+                  create, observe, update, and delete this managed resource should be
+                  configured.
+                properties:
+                  kind:
+                    description: Kind of the referenced object.
+                    type: string
+                  name:
+                    description: Name of the referenced object.
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              writeConnectionSecretToRef:
+                description: |-
+                  WriteConnectionSecretToReference specifies the namespace and name of a
+                  Secret to which any connection details for this managed resource should
+                  be written. Connection details frequently include the endpoint, username,
+                  and password required to connect to the managed resource.
+                properties:
+                  name:
+                    description: Name of the secret.
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - forProvider
+            type: object
+          status:
+            description: An ExternalTableStatus represents the observed state of an
+              ExternalTable.
+            properties:
+              atProvider:
+                description: |-
+                  ExternalTableObservation are the observable fields of an ExternalTable.
+                  Connection strings are reported as URI only (everything after the first
+                  ';' is a secret and is masked by Kusto as well).
+                properties:
+                  columns:
+                    description: Columns as reported by the cluster (only loaded when
+                      the spec has columns).
+                    items:
+                      description: ObservedColumn is a column as reported by the cluster.
+                      properties:
+                        docstring:
+                          description: Docstring of the column.
+                          type: string
+                        name:
+                          description: Name of the column.
+                          type: string
+                        type:
+                          description: Type of the column (canonical Kusto type).
+                          type: string
+                      required:
+                      - name
+                      - type
+                      type: object
+                    type: array
+                  connectionStringUris:
+                    description: ConnectionStringURIs are the URI parts of the connection
+                      strings.
+                    items:
+                      type: string
+                    type: array
+                  dataFormat:
+                    description: DataFormat as reported by the cluster.
+                    type: string
+                  docString:
+                    description: DocString as reported by the cluster.
+                    type: string
+                  folder:
+                    description: Folder as reported by the cluster.
+                    type: string
+                  kind:
+                    description: Kind as reported by the cluster (Blob, Adl, Delta,
+                      ...).
+                    type: string
+                  partitions:
+                    description: Partitions is the partition definition JSON as reported
+                      by the cluster.
+                    type: string
+                  pathFormat:
+                    description: PathFormat as reported by the cluster.
+                    type: string
+                type: object
+              conditions:
+                description: Conditions of the resource.
+                items:
+                  description: A Condition that may apply to a resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        LastTransitionTime is the last time this condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A Message containing details about this condition's last transition from
+                        one status to another, if any.
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        ObservedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      type: integer
+                    reason:
+                      description: A Reason for this condition's last transition from
+                        one status to another.
+                      type: string
+                    status:
+                      description: Status of this condition; is it currently True,
+                        False, or Unknown?
+                      type: string
+                    type:
+                      description: |-
+                        Type of this condition. At most one of each condition type may apply to
+                        a resource at any point in time.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHandledReconcileAt:
+                description: |-
+                  LastHandledReconcileAt holds the value of the most recent
+                  reconcile-requested-at annotation token that the controller has
+                  processed. Users can compare this to the annotation to determine
+                  whether a reconcile request has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the latest metadata.generation
+                  which resulted in either a ready state, or stalled due to error
+                  it can not recover from without human intervention.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

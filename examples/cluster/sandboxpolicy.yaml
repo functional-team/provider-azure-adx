@@ -1,0 +1,16 @@
+apiVersion: cluster.adx.functional.team/v1alpha1
+kind: SandboxPolicy
+metadata:
+  name: sandbox
+  namespace: data-platform
+spec:
+  forProvider:
+    sandboxes:
+      - sandboxKind: PythonExecution
+        initializeOnStartup: false
+        maxNumberOfSandboxes: 16
+        maxCpuPerSandbox: 50
+        maxMemoryMbPerSandbox: 10240
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

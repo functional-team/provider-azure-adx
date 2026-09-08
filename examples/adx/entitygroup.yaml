@@ -1,0 +1,16 @@
+apiVersion: adx.functional.team/v1alpha1
+kind: EntityGroup
+metadata:
+  name: telemetry-sources
+  namespace: data-platform
+spec:
+  forProvider:
+    name: TelemetrySources
+    database: Telemetry
+    # Raw KQL entity expressions, passed verbatim.
+    entities:
+      - cluster('telemetry-prod.westeurope').database('Telemetry')
+      - cluster('telemetry-eu.northeurope').database('Telemetry')
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

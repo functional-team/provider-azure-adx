@@ -1,0 +1,17 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: ExtentTagsRetentionPolicy
+metadata:
+  name: raw-events-tags
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    rules:
+      - tagPrefix: "drop-by:"
+        retentionPeriod: 3d
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod

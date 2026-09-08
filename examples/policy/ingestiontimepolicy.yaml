@@ -1,0 +1,15 @@
+apiVersion: policy.adx.functional.team/v1alpha1
+kind: IngestionTimePolicy
+metadata:
+  name: raw-events-ingestiontime
+  namespace: data-platform
+spec:
+  forProvider:
+    database: Telemetry
+    entity:
+      kind: Table
+      name: RawEvents
+    enabled: true
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
