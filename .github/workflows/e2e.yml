@@ -19,10 +19,13 @@ env:
 
 jobs:
   e2e:
-    # Skipped until the Azure secrets exist (test/e2e/README.md). Cluster
-    # name/URI/resource group/database are secrets, not variables, so they
-    # don't show up in plaintext to anyone with Actions-settings access.
-    if: ${{ secrets.ADX_E2E_CLUSTER_URI != '' }}
+    # Skipped until ADX_E2E_ENABLED is set (test/e2e/README.md). The actual
+    # cluster name/URI/resource group/database are secrets, not variables, so
+    # they don't show up in plaintext to anyone with Actions-settings access
+    # -- but a job-level `if:` cannot reference the secrets context at all
+    # ("Unrecognized named-value: 'secrets'"), so gating needs a separate,
+    # non-sensitive variable instead of checking one of the secrets directly.
+    if: vars.ADX_E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:

@@ -28,7 +28,9 @@ sensitive by nature, but kept as secrets rather than variables so the dev
 cluster's name/URI aren't visible in plaintext to anyone with access to the
 Actions settings).
 
-No repository variables are used.
+Variable: `ADX_E2E_ENABLED` (`true` to run the job at all). A job-level `if:`
+cannot reference the `secrets` context, so this plain on/off switch is a
+variable while the actual cluster config stays in secrets.
 
 ## Running locally
 
