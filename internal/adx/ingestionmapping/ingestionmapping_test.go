@@ -62,6 +62,43 @@ func TestBuild(t *testing.T) {
 	}
 }
 
+// What a real cluster echoes for ".show table T ingestion mappings": lowercase
+// keys, the properties flattened next to the column, and an empty datatype
+// where none was given. Parsing this as if Path lived under a Properties
+// object made every observe report drift, so the mapping was rewritten every
+// poll interval and never became Ready (e2e run 34311711255).
+func TestParseFlattenedProperties(t *testing.T) {
+	raw := `[{"column":"Timestamp","path":"$.ts","datatype":"datetime"},{"column":"DeviceId","path":"$.device.id","datatype":""},{"column":"Payload","path":"$","datatype":""}]`
+	cs, err := ParseMapping(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs) != 3 {
+		t.Fatalf("columns: %+v", cs)
+	}
+	for i, want := range []struct {
+		column, path, dataType string
+	}{
+		{"Timestamp", "$.ts", "datetime"},
+		{"DeviceId", "$.device.id", ""},
+		{"Payload", "$", ""},
+	} {
+		if cs[i].Column != want.column || cs[i].Properties["Path"] != want.path || cs[i].DataType != want.dataType {
+			t.Errorf("column %d: %+v", i, cs[i])
+		}
+	}
+	// The desired spelling of the same mapping must now compare equal, which
+	// is what stops the endless update loop.
+	d := Desired{Kind: "json", Name: "RawEventsJson", Table: "RawEvents", Mapping: []Column{
+		{Column: "Timestamp", DataType: "datetime", Properties: map[string]string{"Path": "$.ts"}},
+		{Column: "DeviceId", Properties: map[string]string{"Path": "$.device.id"}},
+		{Column: "Payload", Properties: map[string]string{"Path": "$"}},
+	}}
+	if equal, diff := Equal(d, Observed{Kind: "json", Name: "RawEventsJson", Mapping: cs}); !equal {
+		t.Errorf("desired must match the service's echo, got diff %q", diff)
+	}
+}
+
 func TestParse(t *testing.T) {
 	raw := `[{"Column":"Timestamp","DataType":"System.DateTime","Properties":{"Path":"$.ts"},"CsvDataType":null},{"column":"Payload","datatype":"dynamic","properties":{"path":"$","Transform":"SourceLocation","Ordinal":null}}]`
 	res := kusto.NewResult(kusto.NewTable("Table_0", cols,

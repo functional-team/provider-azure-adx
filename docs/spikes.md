@@ -22,6 +22,13 @@ integration or e2e suite. Date: 2026-09-07.
 Additional unverified assumptions collected while implementing (all marked in
 code comments):
 
+- `.show table T ingestion mappings` echoes the mapping with **lowercase keys
+  and the properties flattened next to the column**
+  (`[{"column":"Timestamp","path":"$.ts","datatype":"datetime"}]`), and an empty
+  string where no data type was given — verified against a real cluster on
+  2026-09-09. Reading it as `Properties: {"Path": ...}` only made every observe
+  report drift, so the mapping was rewritten every poll interval forever;
+  `ParseMapping` now accepts both spellings.
 - `.show functions` echoes `Parameters` in a text form that
   `normalize.Params` canonicalizes (spacing/type aliases). If the echo differs
   structurally, stage 2 hashes still keep functions stable.

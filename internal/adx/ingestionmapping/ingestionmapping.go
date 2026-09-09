@@ -124,6 +124,23 @@ func ParseMapping(raw string) ([]Column, error) { //nolint:gocyclo // tolerant p
 	out := make([]Column, 0, len(generic))
 	for _, g := range generic {
 		var c Column
+		setProp := func(k string, v any) {
+			if v == nil {
+				return
+			}
+			s, isStr := v.(string)
+			if isStr && s == "" {
+				return
+			}
+			if c.Properties == nil {
+				c.Properties = map[string]string{}
+			}
+			if isStr {
+				c.Properties[CanonicalKey(k)] = s
+				return
+			}
+			c.Properties[CanonicalKey(k)] = fmt.Sprint(v)
+		}
 		for k, v := range g {
 			switch strings.ToLower(k) {
 			case "column":
@@ -133,19 +150,19 @@ func ParseMapping(raw string) ([]Column, error) { //nolint:gocyclo // tolerant p
 					c.DataType = normalize.ColumnType(s)
 				}
 			case "properties":
-				if m, ok := v.(map[string]any); ok && len(m) > 0 {
-					c.Properties = make(map[string]string, len(m))
+				if m, ok := v.(map[string]any); ok {
 					for pk, pv := range m {
-						if pv == nil {
-							continue
-						}
-						if s, ok := pv.(string); ok {
-							c.Properties[CanonicalKey(pk)] = s
-						} else {
-							c.Properties[CanonicalKey(pk)] = fmt.Sprint(pv)
-						}
+						setProp(pk, pv)
 					}
 				}
+			default:
+				// The service echoes mapping properties flattened next to the
+				// column instead of nested under Properties:
+				//   [{"column":"Timestamp","path":"$.ts","datatype":"datetime"}]
+				// (verified against a real cluster on 2026-09-09). Dropping
+				// those made every desired Properties entry look absent, so
+				// the mapping drifted on every single observe, forever.
+				setProp(k, v)
 			}
 		}
 		out = append(out, c)
