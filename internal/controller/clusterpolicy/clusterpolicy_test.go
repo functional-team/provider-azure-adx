@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,6 +111,56 @@ func jsonString(s string) string {
 
 func ext[T ClusterPolicy](kc kusto.Client, def Def[T]) *external[T] {
 	return &external[T]{kc: kc, def: def}
+}
+
+// Deleting a cluster policy cannot be verified the usual way: ".show cluster
+// policy X" keeps answering with Kusto's built-in default, so the resource
+// always looks present. Before the fix the finalizer was never removed and the
+// provider reissued ".delete cluster policy callout" once a minute forever
+// (e2e run 34332137892).
+func TestDeleteFinalizes(t *testing.T) {
+	deleting := func(synced xpv2.Condition) *v1alpha1.CalloutPolicy {
+		cr := &v1alpha1.CalloutPolicy{ObjectMeta: metav1.ObjectMeta{
+			Name: "callout", Namespace: "ns",
+			DeletionTimestamp: &metav1.Time{Time: time.Now()},
+			Finalizers:        []string{"finalizer.managedresource.crossplane.io"},
+		}}
+		cr.Spec.ForProvider.Callouts = []v1alpha1.CalloutRule{{CalloutType: "sql", CalloutURIRegex: ".*", CanCall: true}}
+		cr.SetConditions(xpv2.Deleting(), synced)
+		return cr
+	}
+	for _, tc := range []struct {
+		name       string
+		cr         *v1alpha1.CalloutPolicy
+		wantExists bool
+	}{
+		// Nothing has run yet: the policy must look present so that the
+		// reconciler actually calls Delete and resets it to the default.
+		{"before the delete ran", func() *v1alpha1.CalloutPolicy {
+			cr := deleting(xpv2.ReconcileSuccess())
+			cr.Status.ConditionedStatus = xpv2.ConditionedStatus{}
+			return cr
+		}(), true},
+		// The delete ran and succeeded, so report it gone and let the
+		// finalizer go, leaving the cluster on the default policy.
+		{"delete succeeded", deleting(xpv2.ReconcileSuccess()), false},
+		// The delete failed. Giving up here would drop the finalizer while
+		// claiming a reset that never happened.
+		{"delete failed", deleting(xpv2.ReconcileError(errors.New("boom"))), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := newCluster()
+			cl.policies["callout"] = `[{"CalloutType":"sql","CalloutUriRegex":".*","CanCall":true}]`
+			e := ext(fake.New("http://e").OnFn("", cl.handle), Callout())
+			got, err := e.Observe(context.Background(), tc.cr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.ResourceExists != tc.wantExists {
+				t.Errorf("ResourceExists = %v, want %v", got.ResourceExists, tc.wantExists)
+			}
+		})
+	}
 }
 
 func TestCalloutLifecycle(t *testing.T) {

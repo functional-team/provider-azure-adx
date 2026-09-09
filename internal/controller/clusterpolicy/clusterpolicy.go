@@ -115,8 +115,29 @@ func (e *external[T]) observe(ctx context.Context) (json.RawMessage, bool, error
 	return raw, ok, nil
 }
 
+// resetDone reports whether the delete has already run and succeeded for this
+// resource. The runtime records that as Ready=Deleting plus
+// Synced=ReconcileSuccess before it requeues to verify the deletion. Checking
+// Synced too is essential: Deleting is also marked when the delete itself
+// failed, and treating that as done would drop the finalizer while claiming a
+// reset that never happened.
+func resetDone(cr ClusterPolicy) bool {
+	return cr.GetCondition(xpv2.TypeReady).Reason == xpv2.ReasonDeleting &&
+		cr.GetCondition(xpv2.TypeSynced).Reason == xpv2.ReasonReconcileSuccess
+}
+
 func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObservation, error) {
 	ctx = kusto.WithOp(ctx, e.kind(), "observe")
+	// A cluster policy is a singleton that cannot be observed as absent: once
+	// ours is deleted, ".show cluster policy X" answers with Kusto's built-in
+	// default rather than null, so the resource looks like it still exists.
+	// The finalizer was therefore never removed and the provider re-ran
+	// ".delete cluster policy callout" once a minute, forever (e2e run
+	// 34332137892). Report it gone once the delete has run, which leaves the
+	// cluster on the default -- the point of deleting the resource.
+	if meta.WasDeleted(cr) && resetDone(cr) {
+		return managed.ExternalObservation{ResourceExists: false}, nil
+	}
 	desired, err := e.def.Desired(cr)
 	if err != nil {
 		return managed.ExternalObservation{}, kerrors.NewBlocked(kerrors.ReasonInvalidSpec, "%v", err)
