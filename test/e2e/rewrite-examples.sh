@@ -51,7 +51,7 @@ if [ -n "${ADX_E2E_STORAGE_ACCOUNT:-}" ]; then
   if [ -n "${ADX_E2E_STORAGE_SAS:-}" ]; then
     # & is the whole match in a sed replacement, so it has to be escaped.
     sas="${ADX_E2E_STORAGE_SAS//&/\\&}"
-    edit "s|https://acct2.blob.core.windows.net/exports;.*\"|https://${ADX_E2E_STORAGE_ACCOUNT}.blob.core.windows.net/exports;${sas}\"|g"
+    edit "s|https://acct2.blob.core.windows.net/exports[;?][^\"]*|https://${ADX_E2E_STORAGE_ACCOUNT}.blob.core.windows.net/exports?${sas}|g"
     echo "storage -> ${ADX_E2E_STORAGE_ACCOUNT} (managed identity and SAS)"
   else
     echo "ADX_E2E_STORAGE_SAS unset: the SAS connection string keeps its placeholder" >&2

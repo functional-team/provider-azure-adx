@@ -7,7 +7,10 @@ type: Opaque
 stringData:
   # Connection string with a SAS token. Write-only: sent obfuscated, never
   # shown in status, events or logs. Prefer managed identity (see below).
-  connectionString: "https://acct2.blob.core.windows.net/exports;sv=2022-11-02&ss=b&sig=REPLACE_ME"
+  # A SAS token is appended as a query string with "?". Only an account key
+  # or managed_identity=... follows a ";" -- with the wrong separator ADX
+  # tries to read the token as a base64 account key and rejects it.
+  connectionString: "https://acct2.blob.core.windows.net/exports?sv=2022-11-02&ss=b&sig=REPLACE_ME"
 ---
 apiVersion: adx.functional.team/v1alpha1
 kind: ExternalTable
