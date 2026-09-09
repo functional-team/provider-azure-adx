@@ -189,8 +189,11 @@ type multiDatabaseAdminsJSON struct {
 // MultiDatabaseAdmins defines the MultiDatabaseAdminsPolicy kind.
 func MultiDatabaseAdmins() Def[*v1alpha1.MultiDatabaseAdminsPolicy] {
 	return Def[*v1alpha1.MultiDatabaseAdminsPolicy]{
-		Kind:   base.Kind[*v1alpha1.MultiDatabaseAdminsPolicy]{GVK: v1alpha1.MultiDatabaseAdminsPolicyGroupVersionKind, Object: &v1alpha1.MultiDatabaseAdminsPolicy{}, List: &v1alpha1.MultiDatabaseAdminsPolicyList{}},
-		Policy: adxclusterpolicy.Def{Name: "multidatabaseadmins", HashOnly: true},
+		Kind: base.Kind[*v1alpha1.MultiDatabaseAdminsPolicy]{GVK: v1alpha1.MultiDatabaseAdminsPolicyGroupVersionKind, Object: &v1alpha1.MultiDatabaseAdminsPolicy{}, List: &v1alpha1.MultiDatabaseAdminsPolicyList{}},
+		// Kusto has no ".delete cluster policy multidatabaseadmins": it answers
+		// with a syntax error at the policy name (observed 2026-09-09), so
+		// deleting the resource leaves the policy as it is.
+		Policy: adxclusterpolicy.Def{Name: "multidatabaseadmins", HashOnly: true, NoDelete: true},
 		Desired: func(cr *v1alpha1.MultiDatabaseAdminsPolicy) (any, error) {
 			out := multiDatabaseAdminsJSON{Principals: make([]string, 0, len(cr.Spec.ForProvider.Principals))}
 			for _, p := range cr.Spec.ForProvider.Principals {

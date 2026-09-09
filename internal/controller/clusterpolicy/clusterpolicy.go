@@ -23,6 +23,7 @@ package clusterpolicy
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -226,10 +227,26 @@ func (e *external[T]) Delete(ctx context.Context, cr T) (managed.ExternalDelete,
 		// Kusto has no delete for this policy; the last applied values stay.
 		return managed.ExternalDelete{}, nil
 	}
-	if _, err := e.kc.Mgmt(ctx, "", del); err != nil && !kerrors.IsNotFound(err) {
+	if _, err := e.kc.Mgmt(ctx, "", del); err != nil && !kerrors.IsNotFound(err) && !noDeleteCommand(err) {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDelete)
 	}
 	return managed.ExternalDelete{}, nil
+}
+
+// noDeleteCommand reports whether Kusto has no delete command for this policy
+// at all. It answers with a syntax error pointing at the policy name, e.g.
+// ".delete cluster policy multidatabaseadmins" fails with "SYN0002: A
+// recognition error occurred. [line:position=1:23]" -- position 23 is exactly
+// where the name starts, so the grammar does not accept it for delete.
+//
+// Retrying such a command can never succeed and would keep the resource from
+// finalizing, so it counts as "nothing to delete": the policy keeps its values,
+// like the NoDelete ones. Policies known to behave this way should get
+// NoDelete instead, so no doomed command is sent in the first place; this is
+// the net for the ones nobody has observed deleting yet
+// (request_classification, managed_identity).
+func noDeleteCommand(err error) bool {
+	return strings.Contains(err.Error(), "SYN0002")
 }
 
 func (e *external[T]) Disconnect(_ context.Context) error { return nil }

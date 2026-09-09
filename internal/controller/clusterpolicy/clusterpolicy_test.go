@@ -163,6 +163,34 @@ func TestDeleteFinalizes(t *testing.T) {
 	}
 }
 
+// Kusto has no delete command for every cluster policy: it answers with a
+// syntax error at the policy name. Retrying that forever would keep the
+// resource from finalizing, so Delete must treat it as "nothing to delete".
+func TestDeleteToleratesMissingCommand(t *testing.T) {
+	synErr := errors.New("SYN0002: Request is invalid and cannot be processed: Syntax error: SYN0002: A recognition error occurred. [line:position=1:23]")
+	kc := fake.New("http://e").OnFn("", func(_ string, command cmd.Command) (*kusto.Result, error) {
+		if strings.HasPrefix(command.String(), ".delete cluster policy ") {
+			return nil, synErr
+		}
+		return kusto.NewResult(), nil
+	})
+	e := ext(kc, Sandbox())
+	cr := &v1alpha1.SandboxPolicy{ObjectMeta: metav1.ObjectMeta{Name: "sandbox", Namespace: "ns"}}
+	if _, err := e.Delete(context.Background(), cr); err != nil {
+		t.Errorf("a policy without a delete command must not fail the delete: %v", err)
+	}
+	// Any other permanent failure must still surface.
+	kc = fake.New("http://e").OnFn("", func(_ string, command cmd.Command) (*kusto.Result, error) {
+		if strings.HasPrefix(command.String(), ".delete cluster policy ") {
+			return nil, errors.New("Forbidden: principal is not allowed")
+		}
+		return kusto.NewResult(), nil
+	})
+	if _, err := ext(kc, Sandbox()).Delete(context.Background(), cr); err == nil {
+		t.Error("an unrelated delete failure must be reported")
+	}
+}
+
 func TestCalloutLifecycle(t *testing.T) {
 	cl := newCluster()
 	kc := fake.New("http://e").OnFn("", cl.handle)
