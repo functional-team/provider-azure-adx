@@ -32,21 +32,55 @@ spec:
     partitionBy: "Date:datetime = bin(Timestamp, 1d)"
     pathFormat: "datetime_pattern(\"yyyy/MM/dd\", Date)"
     dataFormat: parquet
+    # connectionStrings is a list of storage *locations* the table's data is
+    # spread over, not a list of ways to reach one location. Listing the same
+    # container twice is rejected: "Multiple paths to the same location were
+    # provided". The SAS variant therefore lives in its own table below.
     connectionStrings:
       # Managed identity of the cluster: no secret, fully comparable.
       # Needs AllDatabasesAdmin for the provider principal and a
       # ManagedIdentityPolicy that allows ExternalTable usage.
       - value: "https://acct.blob.core.windows.net/exports;managed_identity=system"
-      # SAS token from a Secret (write-only).
-      - secretKeyRef:
-          name: exports-storage
-          key: connectionString
     properties:
       folder: External
       docString: Parquet exports
       compressed: true
       compressionType: snappy
       fileExtension: .parquet
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
+# The same storage, reached with a SAS token out of a Secret instead of the
+# cluster identity. Its own table because one table cannot hold two paths to
+# the same location.
+apiVersion: adx.functional.team/v1alpha1
+kind: ExternalTable
+metadata:
+  name: exports-parquet-sas
+  namespace: data-platform
+spec:
+  forProvider:
+    name: ExportsParquetSas
+    database: Telemetry
+    kind: Storage
+    columns:
+      - name: Timestamp
+        type: datetime
+      - name: DeviceId
+        type: string
+      - name: Payload
+        type: dynamic
+    dataFormat: parquet
+    connectionStrings:
+      # Write-only: the provider never reads the token back out of the Secret
+      # for comparison.
+      - secretKeyRef:
+          name: exports-storage
+          key: connectionString
+    properties:
+      folder: External
+      docString: Parquet exports, reached with a SAS token
   providerConfigRef:
     kind: ProviderConfig
     name: telemetry-prod
