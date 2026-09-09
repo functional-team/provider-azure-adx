@@ -219,3 +219,50 @@ func Register[T resource.ModernManaged](mgr ctrl.Manager, o controller.Options, 
 		For(k.Object).
 		Complete(ratelimiter.NewReconciler(name, r, o.GlobalRateLimiter))
 }
+
+// DeleteConfirmed reports whether the external delete has already run and
+// succeeded for cr, which the managed reconciler records as Ready=Deleting
+// plus Synced=ReconcileSuccess before it requeues to verify the deletion.
+//
+// Kusto policies need this because their absence cannot be observed: after
+// ".delete ... policy X" the matching ".show" answers with the built-in
+// default rather than null, both at cluster level (callout, e2e run
+// 34332137892) and at database level (managed_identity, run 34341795631). The
+// resource therefore always looked present, the finalizer was never removed,
+// and the provider reissued the delete once a minute forever. Treat the
+// service's own confirmation of the delete as proof instead.
+//
+// Checking Synced matters: the runtime also marks Deleting when the delete
+// itself failed, and finalizing then would claim a reset that never happened.
+//
+// The trade-off is deliberate: a service that reports a successful delete
+// without performing one is not detected. For these policies that cannot be
+// verified by reading back anyway.
+func DeleteConfirmed(cr resource.ModernManaged) bool {
+	return cr.GetCondition(xpv2.TypeReady).Reason == xpv2.ReasonDeleting &&
+		cr.GetCondition(xpv2.TypeSynced).Reason == xpv2.ReasonReconcileSuccess
+}
+
+// NoDeleteCommand reports whether Kusto has no delete command for a policy at
+// all: it answers with a syntax error pointing at the policy name, e.g.
+// ".delete cluster policy multidatabaseadmins" fails with "SYN0002: A
+// recognition error occurred. [line:position=1:23]", where position 23 is
+// exactly where the name starts. Retrying can never succeed and would keep the
+// resource from finalizing, so it counts as "nothing to delete". The names are
+// constants in this provider, so a syntax error cannot mean a malformed name.
+func NoDeleteCommand(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "SYN0002")
+}
+
+// UpToDate turns a policy comparison into the observation fields. A structural
+// difference brings its own diff; equal structure with differing KQL text does
+// not, so it gets a description of its own.
+func UpToDate(equal bool, diff string) (bool, string) {
+	if equal {
+		return true, ""
+	}
+	if diff == "" {
+		return false, "KQL text differs"
+	}
+	return false, diff
+}

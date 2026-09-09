@@ -25,6 +25,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
+
 	"github.com/functional-team/provider-azure-adx/apis/common"
 	"github.com/functional-team/provider-azure-adx/apis/policy/v1alpha1"
 	adxpolicy "github.com/functional-team/provider-azure-adx/internal/adx/policy"
@@ -59,6 +61,52 @@ func retention(entity common.EntityKind, name, period string) *v1alpha1.Retentio
 		cr.Spec.ForProvider.SoftDeletePeriod = ptr(common.Timespan(period))
 	}
 	return cr
+}
+
+// A policy's absence is not observable everywhere: for the database managed
+// identity policy the ".show" after a successful ".delete" still answers with a
+// non-null policy, so the resource kept looking present and the provider
+// reissued the delete once a minute forever (e2e run 34341795631). Once the
+// delete is confirmed, Observe must report the resource gone.
+func TestObserveFinalizesAfterConfirmedDelete(t *testing.T) {
+	// The cluster keeps answering with a policy, as the real service does.
+	kc := fake.New("http://e").OnFn("", func(_ string, c cmd.Command) (*kusto.Result, error) {
+		if strings.HasPrefix(c.String(), ".show") {
+			return kusto.NewResult(kusto.NewTable("Table_0", showCols,
+				[]any{"RetentionPolicy", "[DB].[T]", `{"SoftDeletePeriod":"365.00:00:00"}`, nil, "Table"})), nil
+		}
+		return kusto.NewResult(), nil
+	})
+	deleting := func(synced xpv2.Condition) *v1alpha1.RetentionPolicy {
+		cr := retention(common.EntityKindTable, "T", "365.00:00:00")
+		cr.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		cr.Finalizers = []string{"finalizer.managedresource.crossplane.io"}
+		cr.SetConditions(xpv2.Deleting(), synced)
+		return cr
+	}
+	for _, tc := range []struct {
+		name       string
+		cr         *v1alpha1.RetentionPolicy
+		wantExists bool
+	}{
+		// Not deleted at all: normal observe, the policy is there.
+		{"not being deleted", retention(common.EntityKindTable, "T", "365.00:00:00"), true},
+		// Delete confirmed by the service: report gone so the finalizer goes.
+		{"delete confirmed", deleting(xpv2.ReconcileSuccess()), false},
+		// Delete failed: keep the resource, otherwise we would claim a
+		// deletion that never happened.
+		{"delete failed", deleting(xpv2.ReconcileError(errors.New("boom"))), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ext(kc, Retention(), true).Observe(context.Background(), tc.cr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.ResourceExists != tc.wantExists {
+				t.Errorf("ResourceExists = %v, want %v", got.ResourceExists, tc.wantExists)
+			}
+		})
+	}
 }
 
 func TestRetentionObserve(t *testing.T) {

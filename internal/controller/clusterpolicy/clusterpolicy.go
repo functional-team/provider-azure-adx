@@ -23,7 +23,6 @@ package clusterpolicy
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,17 +115,6 @@ func (e *external[T]) observe(ctx context.Context) (json.RawMessage, bool, error
 	return raw, ok, nil
 }
 
-// resetDone reports whether the delete has already run and succeeded for this
-// resource. The runtime records that as Ready=Deleting plus
-// Synced=ReconcileSuccess before it requeues to verify the deletion. Checking
-// Synced too is essential: Deleting is also marked when the delete itself
-// failed, and treating that as done would drop the finalizer while claiming a
-// reset that never happened.
-func resetDone(cr ClusterPolicy) bool {
-	return cr.GetCondition(xpv2.TypeReady).Reason == xpv2.ReasonDeleting &&
-		cr.GetCondition(xpv2.TypeSynced).Reason == xpv2.ReasonReconcileSuccess
-}
-
 func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObservation, error) {
 	ctx = kusto.WithOp(ctx, e.kind(), "observe")
 	// A cluster policy is a singleton that cannot be observed as absent: once
@@ -136,7 +124,7 @@ func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObserv
 	// ".delete cluster policy callout" once a minute, forever (e2e run
 	// 34332137892). Report it gone once the delete has run, which leaves the
 	// cluster on the default -- the point of deleting the resource.
-	if meta.WasDeleted(cr) && resetDone(cr) {
+	if meta.WasDeleted(cr) && base.DeleteConfirmed(cr) {
 		return managed.ExternalObservation{ResourceExists: false}, nil
 	}
 	desired, err := e.def.Desired(cr)
@@ -156,14 +144,7 @@ func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObserv
 	}
 	cr.SetClusterPolicyObservation(v1alpha1.ClusterPolicyObservation{Policy: adxpolicy.Compact(raw)})
 	cr.SetConditions(xpv2.Available())
-	upToDate := res.Equal && base.TextUpToDate(cr, res.DesiredTexts, res.ObservedTexts)
-	diff := ""
-	if !upToDate {
-		diff = res.Diff
-		if diff == "" {
-			diff = "KQL text differs"
-		}
-	}
+	upToDate, diff := base.UpToDate(res.Equal && base.TextUpToDate(cr, res.DesiredTexts, res.ObservedTexts), res.Diff)
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate, Diff: diff}, nil
 }
 
@@ -227,26 +208,10 @@ func (e *external[T]) Delete(ctx context.Context, cr T) (managed.ExternalDelete,
 		// Kusto has no delete for this policy; the last applied values stay.
 		return managed.ExternalDelete{}, nil
 	}
-	if _, err := e.kc.Mgmt(ctx, "", del); err != nil && !kerrors.IsNotFound(err) && !noDeleteCommand(err) {
+	if _, err := e.kc.Mgmt(ctx, "", del); err != nil && !kerrors.IsNotFound(err) && !base.NoDeleteCommand(err) {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDelete)
 	}
 	return managed.ExternalDelete{}, nil
-}
-
-// noDeleteCommand reports whether Kusto has no delete command for this policy
-// at all. It answers with a syntax error pointing at the policy name, e.g.
-// ".delete cluster policy multidatabaseadmins" fails with "SYN0002: A
-// recognition error occurred. [line:position=1:23]" -- position 23 is exactly
-// where the name starts, so the grammar does not accept it for delete.
-//
-// Retrying such a command can never succeed and would keep the resource from
-// finalizing, so it counts as "nothing to delete": the policy keeps its values,
-// like the NoDelete ones. Policies known to behave this way should get
-// NoDelete instead, so no doomed command is sent in the first place; this is
-// the net for the ones nobody has observed deleting yet
-// (request_classification, managed_identity).
-func noDeleteCommand(err error) bool {
-	return strings.Contains(err.Error(), "SYN0002")
 }
 
 func (e *external[T]) Disconnect(_ context.Context) error { return nil }

@@ -30,6 +30,7 @@ import (
 
 	"github.com/crossplane/crossplane-runtime/v2/pkg/controller"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/errors"
+	"github.com/crossplane/crossplane-runtime/v2/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/reconciler/managed"
 	"github.com/crossplane/crossplane-runtime/v2/pkg/resource"
 	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
@@ -192,6 +193,15 @@ func (e *external[T]) observeBatch(ctx context.Context, ent adxpolicy.Entity) (r
 
 func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObservation, error) {
 	ctx = kusto.WithOp(ctx, e.kind(), "observe")
+	// A policy's absence is not observable for every entity: after
+	// ".delete database ['DB'] policy managed_identity" the matching ".show"
+	// still answers with a non-null policy, so the resource kept looking
+	// present and the provider reissued the delete once a minute forever
+	// (e2e run 34341795631). Take the service's confirmation of the delete as
+	// proof instead; base.DeleteConfirmed spells out the trade-off.
+	if meta.WasDeleted(cr) && base.DeleteConfirmed(cr) {
+		return managed.ExternalObservation{ResourceExists: false}, nil
+	}
 	ent, err := e.entity(cr)
 	if err != nil {
 		return managed.ExternalObservation{}, errors.Wrap(err, errObserve)
@@ -213,14 +223,7 @@ func (e *external[T]) Observe(ctx context.Context, cr T) (managed.ExternalObserv
 	}
 	cr.SetPolicyObservation(v1alpha1.PolicyObservation{Entity: ent.Display(), Policy: adxpolicy.Compact(raw)})
 	cr.SetConditions(xpv2.Available())
-	upToDate := res.Equal && base.TextUpToDate(cr, res.DesiredTexts, res.ObservedTexts)
-	diff := ""
-	if !upToDate {
-		diff = res.Diff
-		if diff == "" {
-			diff = "KQL text differs"
-		}
-	}
+	upToDate, diff := base.UpToDate(res.Equal && base.TextUpToDate(cr, res.DesiredTexts, res.ObservedTexts), res.Diff)
 	return managed.ExternalObservation{ResourceExists: true, ResourceUpToDate: upToDate, Diff: diff}, nil
 }
 
@@ -296,7 +299,7 @@ func (e *external[T]) Delete(ctx context.Context, cr T) (managed.ExternalDelete,
 	}
 	_, err = e.kc.Mgmt(ctx, ent.Database, del)
 	e.invalidate(ent.Database)
-	if err != nil && !kerrors.IsNotFound(err) {
+	if err != nil && !kerrors.IsNotFound(err) && !base.NoDeleteCommand(err) {
 		return managed.ExternalDelete{}, errors.Wrap(err, errDelete)
 	}
 	return managed.ExternalDelete{}, nil
