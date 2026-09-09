@@ -74,7 +74,8 @@ test-integration:
 # test/e2e/README.md.
 UPTEST_LOCAL_DEPLOY_TARGET = local.xpkg.deploy.provider.$(PROJECT_NAME)
 # externaltable/continuousexport/clustermanagedidentitypolicy need a Storage
-# Account (test/e2e/README.md) the dev environment doesn't have yet.
+# Account (test/e2e/README.md) the dev environment doesn't have yet, and
+# queryaccelerationpolicy applies to the external table those create.
 # function.yaml's parameters value "(limit:long = 100)" collides with
 # chainsaw/uptest's own templating: any string starting with "(" and ending
 # with ")" is parsed as an embedded JMESPath expression, and "limit:long =
@@ -88,6 +89,7 @@ UPTEST_INPUT_MANIFESTS ?= $(shell find examples -name '*.yaml' \
 	-not -name 'externaltable.yaml' \
 	-not -name 'continuousexport.yaml' \
 	-not -name 'clustermanagedidentitypolicy.yaml' \
+	-not -name 'queryaccelerationpolicy.yaml' \
 	-not -name 'function.yaml' \
 	| sort | tr '\n' ',' | sed 's/,$$//')
 UPTEST_SETUP_SCRIPT ?= test/e2e/setup.sh
