@@ -1,3 +1,49 @@
+# The target table and the function the update query calls. Kusto validates
+# both when the policy is set, so the example carries its own prerequisites.
+apiVersion: adx.functional.team/v1alpha1
+kind: Table
+metadata:
+  name: parsed-events
+  namespace: data-platform
+  annotations:
+    crossplane.io/external-name: ParsedEvents
+spec:
+  forProvider:
+    database: Telemetry
+    columns:
+      - name: Timestamp
+        type: datetime
+      - name: DeviceId
+        type: string
+      - name: Level
+        type: string
+    folder: Parsing
+    docstring: Rows the update policy derives from RawEvents
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
+# The function must return exactly the target table's schema, otherwise Kusto
+# rejects the update policy.
+apiVersion: adx.functional.team/v1alpha1
+kind: Function
+metadata:
+  name: parse-raw-events
+  namespace: data-platform
+  annotations:
+    crossplane.io/external-name: ParseRawEvents
+spec:
+  forProvider:
+    database: Telemetry
+    body: |
+      RawEvents
+      | project Timestamp, DeviceId, Level = tostring(Payload.level)
+    folder: Parsing
+    docstring: Projects RawEvents onto the ParsedEvents schema
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
 apiVersion: policy.adx.functional.team/v1alpha1
 kind: UpdatePolicy
 metadata:

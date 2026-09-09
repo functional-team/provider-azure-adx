@@ -59,9 +59,11 @@ jobs:
           install: true
       # Must run before make e2e: uptest snapshots the examples before it calls
       # the setup script, so rewriting from there is too late.
-      - name: Point examples at the dev database
+      - name: Point examples at the dev environment
         env:
           ADX_E2E_DATABASE: ${{ secrets.ADX_E2E_DATABASE }}
+          ADX_E2E_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ADX_E2E_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: ./test/e2e/rewrite-examples.sh
       # make e2e = build + kind cluster with Crossplane + local provider deploy
       # + uptest over examples/. setup.sh creates the ProviderConfig from the

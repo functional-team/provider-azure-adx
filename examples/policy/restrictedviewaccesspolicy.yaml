@@ -1,3 +1,29 @@
+# The table the policy applies to. Kusto rejects a policy on a table that does
+# not exist, so the example carries its own prerequisite.
+apiVersion: adx.functional.team/v1alpha1
+kind: Table
+metadata:
+  name: customer-pii
+  namespace: data-platform
+  annotations:
+    crossplane.io/external-name: CustomerPII
+spec:
+  forProvider:
+    database: Telemetry
+    columns:
+      - name: CustomerId
+        type: string
+      - name: Email
+        type: string
+        docstring: Personal data, only visible to unrestricted viewers
+      - name: Region
+        type: string
+    folder: Sensitive
+    docstring: Customer data behind the restricted view access policy
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
 apiVersion: policy.adx.functional.team/v1alpha1
 kind: RestrictedViewAccessPolicy
 metadata:

@@ -1,16 +1,68 @@
+# The table the policy applies to, plus the function that filters its rows.
+# Both are prerequisites Kusto validates when the policy is set.
+#
+# Deliberately not RawEvents: a table read by a materialized view cannot get an
+# enabled row level security policy unless the view is configured for it
+# ("this table is referenced by Materialized View 'LatestEvents' for which
+# row_level_security is not configured").
+apiVersion: adx.functional.team/v1alpha1
+kind: Table
+metadata:
+  name: orders
+  namespace: data-platform
+  annotations:
+    crossplane.io/external-name: Orders
+spec:
+  forProvider:
+    database: Telemetry
+    columns:
+      - name: OrderId
+        type: string
+      - name: CustomerId
+        type: string
+      - name: Region
+        type: string
+      - name: Amount
+        type: real
+    folder: Sales
+    docstring: Orders, restricted per caller by the row level security policy
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
+# The function must return the table's own schema; anything else is rejected.
+apiVersion: adx.functional.team/v1alpha1
+kind: Function
+metadata:
+  name: orders-for-current-user
+  namespace: data-platform
+  annotations:
+    crossplane.io/external-name: OrdersForCurrentUser
+spec:
+  forProvider:
+    database: Telemetry
+    body: |
+      Orders
+      | where CustomerId == tostring(current_principal_details()["UserPrincipalName"])
+    folder: Sales
+    docstring: Restricts Orders to the rows belonging to the calling principal
+  providerConfigRef:
+    kind: ProviderConfig
+    name: telemetry-prod
+---
 apiVersion: policy.adx.functional.team/v1alpha1
 kind: RowLevelSecurityPolicy
 metadata:
-  name: raw-events-rls
+  name: orders-rls
   namespace: data-platform
 spec:
   forProvider:
     database: Telemetry
     entity:
       kind: Table
-      name: RawEvents
+      name: Orders
     enabled: true
-    query: RawEventsForCurrentUser()
+    query: OrdersForCurrentUser()
   providerConfigRef:
     kind: ProviderConfig
     name: telemetry-prod
