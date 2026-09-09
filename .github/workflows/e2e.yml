@@ -50,9 +50,26 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # A start collides with a stop that is still settling: Azure refuses with
+      # "provisioning state is not terminal". The cluster's state and its ARM
+      # provisioningState are separate axes -- a cluster can read Stopped while
+      # provisioningState is still "Running", meaning an operation is in
+      # flight. Wait for a terminal provisioningState, then start.
       - name: Start dev cluster
+        env:
+          NAME: ${{ secrets.ADX_E2E_CLUSTER_NAME }}
+          RG: ${{ secrets.ADX_E2E_RESOURCE_GROUP }}
         run: |
-          az kusto cluster start --name "${{ secrets.ADX_E2E_CLUSTER_NAME }}" --resource-group "${{ secrets.ADX_E2E_RESOURCE_GROUP }}"
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            prov=$(az kusto cluster show --name "$NAME" --resource-group "$RG" --query provisioningState -o tsv)
+            case "$prov" in
+              Succeeded|Failed|Canceled) break ;;
+            esac
+            echo "provisioningState=$prov, waiting"
+            sleep 20
+          done
+          az kusto cluster start --name "$NAME" --resource-group "$RG"
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
