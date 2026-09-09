@@ -64,6 +64,8 @@ jobs:
           ADX_E2E_DATABASE: ${{ secrets.ADX_E2E_DATABASE }}
           ADX_E2E_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ADX_E2E_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ADX_E2E_STORAGE_ACCOUNT: ${{ secrets.ADX_E2E_STORAGE_ACCOUNT }}
+          ADX_E2E_STORAGE_SAS: ${{ secrets.ADX_E2E_STORAGE_SAS }}
         run: ./test/e2e/rewrite-examples.sh
       # make e2e = build + kind cluster with Crossplane + local provider deploy
       # + uptest over examples/. setup.sh creates the ProviderConfig from the

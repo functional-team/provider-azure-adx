@@ -8,15 +8,17 @@ and is deleted cleanly. It runs against a **real** Azure Data Explorer cluster
 because the emulator has no authentication, no Azure Storage and no
 materialized-view backfill worth the name.
 
-Five examples are currently excluded in `Makefile` (`UPTEST_INPUT_MANIFESTS`):
-`externaltable.yaml`, `continuousexport.yaml` and
-`clustermanagedidentitypolicy.yaml` need the storage account below, which the
-dev environment doesn't have yet, and `queryaccelerationpolicy.yaml` applies to
-the external table they create; `function.yaml`'s `parameters` value
-(`"(limit:long = 100)"`) collides with chainsaw/uptest's own templating, which
-parses any string starting with `(` and ending with `)` as a JMESPath
-expression. The Function *kind* is still exercised, by the parameterless
-functions the update-policy and row-level-security examples ship.
+Three examples are excluded in `Makefile` (`UPTEST_INPUT_MANIFESTS`):
+`clustermanagedidentitypolicy.yaml` names a second identity for
+`DataConnection` that is not attached to the dev cluster;
+`queryaccelerationpolicy.yaml` applies to an external table `ExportsDelta` that
+no example creates, and query acceleration only works on Delta Lake external
+tables, so it needs delta data in storage rather than just a container; and
+`function.yaml`'s `parameters` value (`"(limit:long = 100)"`) collides with
+chainsaw/uptest's own templating, which parses any string starting with `(` and
+ending with `)` as a JMESPath expression. The Function *kind* is still
+exercised, by the parameterless functions the update-policy and
+row-level-security examples ship.
 
 ## Azure resources
 
@@ -30,7 +32,10 @@ functions the update-policy and row-level-security examples ship.
 
 ## GitHub configuration
 
-Secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
+Secrets: `ADX_E2E_STORAGE_ACCOUNT` and `ADX_E2E_STORAGE_SAS` (the SAS query
+string only, no leading `?`) point the external-table example at the real
+storage account -- one connection string authenticates as the cluster's managed
+identity, the other with the SAS. Plus `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`,
 `ADX_E2E_CLIENT_SECRET` (the SPN secret used by the ProviderConfig inside kind;
 the workflow itself authenticates with OIDC), and `ADX_E2E_CLUSTER_NAME`,
 `ADX_E2E_RESOURCE_GROUP`, `ADX_E2E_CLUSTER_URI`, `ADX_E2E_DATABASE` (not

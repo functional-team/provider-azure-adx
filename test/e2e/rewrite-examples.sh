@@ -41,3 +41,21 @@ if [ -n "${ADX_E2E_CLIENT_ID:-}" ] && [ -n "${ADX_E2E_TENANT_ID:-}" ]; then
 else
   echo "ADX_E2E_CLIENT_ID/ADX_E2E_TENANT_ID unset, leaving principals as they are" >&2
 fi
+
+# The external table example points at made-up storage accounts and carries a
+# SAS placeholder. Both connection strings have to name the real account: the
+# first authenticates as the cluster's managed identity, the second with a SAS
+# out of ADX_E2E_STORAGE_SAS (the query string only, without a leading "?").
+if [ -n "${ADX_E2E_STORAGE_ACCOUNT:-}" ]; then
+  edit "s|https://acct.blob.core.windows.net/exports|https://${ADX_E2E_STORAGE_ACCOUNT}.blob.core.windows.net/exports|g"
+  if [ -n "${ADX_E2E_STORAGE_SAS:-}" ]; then
+    # & is the whole match in a sed replacement, so it has to be escaped.
+    sas="${ADX_E2E_STORAGE_SAS//&/\\&}"
+    edit "s|https://acct2.blob.core.windows.net/exports;.*\"|https://${ADX_E2E_STORAGE_ACCOUNT}.blob.core.windows.net/exports;${sas}\"|g"
+    echo "storage -> ${ADX_E2E_STORAGE_ACCOUNT} (managed identity and SAS)"
+  else
+    echo "ADX_E2E_STORAGE_SAS unset: the SAS connection string keeps its placeholder" >&2
+  fi
+else
+  echo "ADX_E2E_STORAGE_ACCOUNT unset, leaving the external table's storage as it is" >&2
+fi

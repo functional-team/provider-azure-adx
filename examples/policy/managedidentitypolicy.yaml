@@ -13,6 +13,9 @@ spec:
         allowedUsages:
           - NativeIngestion
           - ExternalTable
+          # Continuous exports that authenticate as the cluster identity need
+          # this; without it the export fails to start.
+          - AutomatedFlows
   providerConfigRef:
     kind: ProviderConfig
     name: telemetry-prod

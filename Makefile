@@ -73,21 +73,21 @@ test-integration:
 # credentials are created by test/e2e/setup.sh from ADX_E2E_* variables, see
 # test/e2e/README.md.
 UPTEST_LOCAL_DEPLOY_TARGET = local.xpkg.deploy.provider.$(PROJECT_NAME)
-# externaltable/continuousexport/clustermanagedidentitypolicy need a Storage
-# Account (test/e2e/README.md) the dev environment doesn't have yet, and
-# queryaccelerationpolicy applies to the external table those create.
+# clustermanagedidentitypolicy names a second identity for DataConnection that
+# is not attached to the dev cluster, and queryaccelerationpolicy applies to an
+# external table named ExportsDelta that no example creates -- query
+# acceleration only works on Delta Lake external tables, so it needs delta data
+# in storage, not just a container.
 # function.yaml's parameters value "(limit:long = 100)" collides with
 # chainsaw/uptest's own templating: any string starting with "(" and ending
 # with ")" is parsed as an embedded JMESPath expression, and "limit:long =
 # 100" isn't valid JMESPath. No escape/opt-out exists upstream (checked
-# chainsaw's templating docs); Function is still covered by the emulator
-# integration suite. Revisit both exclusions once the storage account exists
-# and/or uptest offers a way around the templating collision.
+# chainsaw's templating docs). The Function kind is still exercised, by the
+# parameterless functions the update-policy and row-level-security examples
+# ship, and by the emulator integration suite.
 UPTEST_INPUT_MANIFESTS ?= $(shell find examples -name '*.yaml' \
 	-not -path 'examples/provider/*' \
 	-not -path 'examples/composition/*' \
-	-not -name 'externaltable.yaml' \
-	-not -name 'continuousexport.yaml' \
 	-not -name 'clustermanagedidentitypolicy.yaml' \
 	-not -name 'queryaccelerationpolicy.yaml' \
 	-not -name 'function.yaml' \
