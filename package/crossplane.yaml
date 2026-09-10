@@ -1,8 +1,9 @@
-apiVersion: meta.pkg.crossplane.io/v1alpha1
+apiVersion: meta.pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-azure-adx
   annotations:
+    friendly-name.meta.crossplane.io: Provider Azure Data Explorer
     meta.crossplane.io/maintainer: Christoph Thale <christoph.thale@functional.team>
     meta.crossplane.io/source: github.com/functional-team/provider-azure-adx
     meta.crossplane.io/license: Apache-2.0
@@ -14,9 +15,138 @@ metadata:
       database, data connections) are out of scope and remain with
       provider-upbound-azure.
     meta.crossplane.io/readme: |
-      provider-azure-adx manages Azure Data Explorer (Kusto) database and
-      cluster artefacts declaratively via management commands. It requires
-      Crossplane 2.0 or newer and uses namespaced managed resources only.
+      `provider-azure-adx` manages what lives *behind* the Kusto endpoint of an
+      Azure Data Explorer cluster — tables, functions, materialized views,
+      external tables, continuous exports, ingestion mappings, entity groups,
+      database and table policies, security roles and cluster-level policies —
+      declaratively, through Kusto management commands, with continuous drift
+      correction.
+
+      Everything that is an ARM resource (cluster, database, data connections,
+      principal assignments, database scripts) stays with
+      [provider-upbound-azure](https://marketplace.upbound.io/providers/upbound/provider-azure-kusto)
+      (`kusto.azure.upbound.io`). The two compose.
+
+      Microsoft's own declarative option, the ARM *database script*
+      (`kusto_script`), is fire-and-forget: it neither observes nor repairs
+      drift. That gap is what this provider fills.
+
+      ## Requirements
+
+      - **Crossplane 2.0 or newer.** Every managed resource is namespaced
+        (Crossplane v2 style); there are no cluster-scoped legacy kinds. The
+        package declares the `safe-start` capability.
+      - An ADX cluster, and a principal with the rights listed in
+        [docs/permissions.md](https://github.com/functional-team/provider-azure-adx/blob/main/docs/permissions.md).
+
+      ## Install
+
+      ```yaml
+      apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      metadata:
+        name: provider-azure-adx
+      spec:
+        package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0-rc.4
+      ```
+
+      ## Connect to a cluster
+
+      One `ProviderConfig` (namespaced) or `ClusterProviderConfig`
+      (cluster-scoped) per ADX cluster. The database is *not* part of the
+      config; every database-scoped resource names its database in
+      `spec.forProvider.database`.
+
+      ```yaml
+      apiVersion: adx.functional.team/v1alpha1
+      kind: ProviderConfig
+      metadata:
+        name: telemetry-prod
+        namespace: data-platform
+      spec:
+        clusterUri: https://telemetry-prod.westeurope.kusto.windows.net
+        credentials:
+          source: Secret        # Secret | WorkloadIdentity | ManagedIdentity | None
+          secretRef:
+            namespace: data-platform
+            name: adx-sp
+            key: credentials    # {"clientId":"…","clientSecret":"…","tenantId":"…"}
+      ```
+
+      The Secret layout is the one provider-upbound-azure uses, so the same
+      credentials Secret serves both providers.
+
+      ## Kinds
+
+      | Group | Kinds |
+      |---|---|
+      | `adx.functional.team` | ProviderConfig, ClusterProviderConfig, Table, Function, MaterializedView, ExternalTable, ContinuousExport, IngestionMapping, EntityGroup |
+      | `policy.adx.functional.team` | RetentionPolicy, CachingPolicy, UpdatePolicy, RowLevelSecurityPolicy, IngestionBatchingPolicy, StreamingIngestionPolicy, MergePolicy, ShardingPolicy, PartitioningPolicy, IngestionTimePolicy, AutoDeletePolicy, RestrictedViewAccessPolicy, ExtentTagsRetentionPolicy, EncodingPolicy, ManagedIdentityPolicy, RowOrderPolicy, QueryAccelerationPolicy |
+      | `security.adx.functional.team` | SecurityRole |
+      | `cluster.adx.functional.team` | WorkloadGroup, RequestClassificationPolicy, CalloutPolicy, CapacityPolicy, SandboxPolicy, QueryWeakConsistencyPolicy, ClusterManagedIdentityPolicy, MultiDatabaseAdminsPolicy |
+
+      Kusto names are usually PascalCase and not valid Kubernetes names, so the
+      `crossplane.io/external-name` annotation is the source of truth for the
+      Kusto name. Set it directly, or set `spec.forProvider.name` and the
+      provider copies it over on the first reconcile. Both are immutable
+      afterwards: renaming means a new Kusto entity, and the old one is
+      orphaned rather than dropped.
+
+      Policies are separate kinds with an `entity` discriminator. A policy
+      counts as existing only when it is set *on that entity* — an inherited
+      database policy does not adopt a table. Only fields the spec sets are
+      compared; the rest keep the Kusto defaults. Deleting a policy resource
+      restores inheritance and never drops data.
+
+      ## Guardrails against data loss
+
+      Crossplane has no plan/apply step, so destructive changes have to be
+      explicit:
+
+      - `Table.spec.forProvider.schemaUpdateMode` defaults to `Merge`, which
+        only adds columns. Columns present in the cluster but missing from the
+        spec are kept and reported in `status.atProvider.driftColumns`.
+        `Replace` makes the spec authoritative and drops columns *and their
+        data*.
+      - A column type change is never applied: the resource goes
+        `Synced=False` with reason `UnsupportedColumnTypeChange` and sends no
+        command.
+      - External table connection strings with secrets are write-only — sent
+        obfuscated, never present in status, events or logs. Prefer
+        `;managed_identity=system`.
+      - `SecurityRole` defaults to `mode: Authoritative` and removes principals
+        that are not in the spec. Use `Additive` for shared roles.
+
+      ## KQL is code
+
+      Function bodies, update policy queries, row level security queries,
+      materialized view queries and continuous export queries are sent
+      verbatim. Whoever may create these resources runs arbitrary KQL with the
+      provider principal's permissions — scope Kubernetes RBAC accordingly.
+
+      Kusto reformats KQL when it stores it, so text is compared in two stages:
+      a deterministic normalization, and a hash of what was last written versus
+      what was read back right after that write. That is what keeps hundreds of
+      functions from being rewritten on every poll.
+
+      ## Scale
+
+      Kusto throttles management commands per cluster. The provider polls every
+      10 minutes by default, observes in batches per database rather than one
+      command per resource, limits commands per cluster and treats HTTP 429 as
+      retryable. Metrics: `adx_commands_total`, `adx_command_duration_seconds`,
+      `adx_commands_throttled_total`, `adx_observe_cache_requests_total`.
+
+      ## Status
+
+      Pre-release. Create, observe, update and delete are verified against a
+      real ADX cluster in CI on every commit. What is still unverified is
+      tracked in
+      [docs/spikes.md](https://github.com/functional-team/provider-azure-adx/blob/main/docs/spikes.md).
+
+      Full documentation, examples for every kind and the generated API
+      reference:
+      [github.com/functional-team/provider-azure-adx](https://github.com/functional-team/provider-azure-adx).
 spec:
   crossplane:
     version: ">=v2.0.0"

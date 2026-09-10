@@ -48,11 +48,31 @@ IMAGES = provider-azure-adx
 XPKG_REG_ORGS ?= ghcr.io/functional-team
 XPKG_REG_ORGS_NO_PROMOTE ?= ghcr.io/functional-team
 XPKGS = provider-azure-adx
+# The examples are embedded in the package (--examples-root) and are what the
+# Marketplace shows as the manifest for each kind. Three of them carry uptest
+# hook annotations, which are test scaffolding and point at files a user does
+# not have, so the package gets a staged copy without them. Not
+# XPKG_CLEANUP_EXAMPLES_ENABLED: that strips the same annotations by
+# round-tripping every file through a YAML parser, losing all comments and the
+# key order. uptest keeps reading examples/ directly, so what the e2e suite
+# tests stays the manifests we ship.
+XPKG_EXAMPLES_DIR = $(OUTPUT_DIR)/examples
 -include build/makelib/xpkg.mk
+
+xpkg.examples:
+	@$(INFO) staging examples for the package
+	@rm -rf $(XPKG_EXAMPLES_DIR)
+	@cd $(ROOT_DIR)/examples && find . -name '*.yaml' | while read -r f; do \
+		mkdir -p "$(XPKG_EXAMPLES_DIR)/$$(dirname "$$f")"; \
+		awk -f $(ROOT_DIR)/hack/strip-uptest-annotations.awk "$$f" > "$(XPKG_EXAMPLES_DIR)/$$f" || exit 1; \
+	done || $(FAIL)
+	@$(OK) staging examples for the package
+
+.PHONY: xpkg.examples
 
 # NOTE(hasheddan): we force image building to happen prior to xpkg build so that
 # we ensure image is present in daemon.
-xpkg.build.provider-azure-adx: do.build.images
+xpkg.build.provider-azure-adx: do.build.images xpkg.examples
 
 fallthrough: submodules
 	@echo Initial setup complete. Running make again . . .

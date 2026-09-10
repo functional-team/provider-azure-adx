@@ -18,8 +18,10 @@ Microsoft's own declarative option, the ARM *database script* (`kusto_script`),
 is fire-and-forget: it neither observes nor repairs drift. That gap is what this
 provider fills.
 
-Status: pre-release. Packages are published to `ghcr.io/functional-team`
-(private until the first public release, see [Roadmap](#roadmap)).
+Status: pre-release. Packages are published to
+`xpkg.upbound.io/functional-team` (the registry the Upbound Marketplace lists)
+and mirrored to `ghcr.io/functional-team`. Both are private until the first
+public release, see [Roadmap](#roadmap).
 
 ## Requirements
 
@@ -38,23 +40,27 @@ kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
+  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
 ```
 
-While the package is private, the `crossplane-system` namespace needs a pull
-secret with a GitHub token that has `read:packages`, referenced via
-`spec.packagePullSecrets`:
+`ghcr.io/functional-team/provider-azure-adx` carries the same package, minus
+the Marketplace extension layers (see [`extensions/`](extensions)).
+
+While the repository is private, the `crossplane-system` namespace needs a pull
+secret, referenced via `spec.packagePullSecrets`. For Upbound that is a robot
+token; for GHCR a GitHub token with `read:packages`:
 
 ```sh
-kubectl -n crossplane-system create secret docker-registry ghcr-functional-team \
-  --docker-server=ghcr.io --docker-username=<github-user> --docker-password=<token>
+kubectl -n crossplane-system create secret docker-registry upbound-functional-team \
+  --docker-server=xpkg.upbound.io \
+  --docker-username=<robot-access-id> --docker-password=<robot-token>
 ```
 
 ```yaml
 spec:
-  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
+  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
   packagePullSecrets:
-    - name: ghcr-functional-team
+    - name: upbound-functional-team
 ```
 
 A step-by-step smoke test against a real cluster is in
