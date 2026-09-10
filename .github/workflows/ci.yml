@@ -8,6 +8,11 @@ on:
   pull_request: {}
   workflow_dispatch: {}
 
+# Least privilege. Nothing here writes to the repository, and on a public
+# repository a pull request from a fork must not be able to do more than read.
+permissions:
+  contents: read
+
 env:
   # Common versions
   GO_VERSION: '1.25.0'
@@ -159,11 +164,6 @@ jobs:
         env:
           # docker buildx does not load the images it builds by default.
           BUILD_ARGS: "--load"
-      - name: Publish Artifacts to GitHub
-        uses: actions/upload-artifact@v4
-        with:
-          name: output
-          path: _output/**
       # Pre-release builds from main land under ghcr.io as <branch> channel
       # tags; the package stays private until the first public release.
       - name: Publish Artifacts
