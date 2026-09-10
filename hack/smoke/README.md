@@ -8,9 +8,10 @@ does not depend on Azure identity plumbing.
 
 - Crossplane 2.x installed (`helm install crossplane crossplane-stable/crossplane
   -n crossplane-system --create-namespace`).
-- An Upbound robot token for `xpkg.upbound.io/functional-team`, as long as the
-  repository is private. (A GitHub PAT with `read:packages` works too if you
-  point the manifest at the `ghcr.io` copy.)
+- An Upbound robot token for `xpkg.upbound.io/functional-team`, as long as that
+  repository is not public. The `ghcr.io` copy is not an alternative: the
+  organization does not allow public packages, so it is reachable only by
+  members.
 - A service principal that is Database Admin on the target database:
   `.add database <DB> admins ('aadapp=<clientId>;<tenantId>')`.
 - The examples use database `Telemetry`; either create it or replace the

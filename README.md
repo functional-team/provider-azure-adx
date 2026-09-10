@@ -21,9 +21,9 @@ is fire-and-forget: it neither observes nor repairs drift. That gap is what this
 provider fills.
 
 Status: pre-release. Packages are published to
-`xpkg.upbound.io/functional-team` (the registry the Upbound Marketplace lists)
-and mirrored to `ghcr.io/functional-team`. Both are private until the first
-public release, see [Roadmap](#roadmap).
+`xpkg.upbound.io/functional-team`, the registry the Upbound Marketplace lists.
+A copy goes to `ghcr.io/functional-team`, but that one stays private: the
+organization does not permit public packages, so pull it from Upbound.
 
 ## Requirements
 
@@ -45,13 +45,9 @@ spec:
   package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
 ```
 
-`ghcr.io/functional-team/provider-azure-adx` carries the same package, minus
-the Marketplace extension layers (see
-[docs/marketplace-extensions.md](docs/marketplace-extensions.md)).
-
-While the repository is private, the `crossplane-system` namespace needs a pull
-secret, referenced via `spec.packagePullSecrets`. For Upbound that is a robot
-token; for GHCR a GitHub token with `read:packages`:
+If the Upbound repository is not public yet, the `crossplane-system` namespace
+needs a pull secret with an Upbound robot token, referenced via
+`spec.packagePullSecrets`:
 
 ```sh
 kubectl -n crossplane-system create secret docker-registry upbound-functional-team \
