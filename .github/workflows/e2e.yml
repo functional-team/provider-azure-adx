@@ -126,17 +126,12 @@ jobs:
           echo "::group::EntityGroup telemetry-sources"
           $KUBECTL -n data-platform get entitygroup telemetry-sources -o yaml || true
           echo "::endgroup::"
-      - name: Collect diagnostics
-        if: failure()
-        run: make controlplane.dump || true
-      - name: Upload diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: controlplane-dump
-          path: _output/controlplane-dump
-          retention-days: 7
-          if-no-files-found: warn
+      # No controlplane dump artifact. GitHub masks registered secrets in the
+      # log stream but not inside uploaded files, and `kubectl cluster-info
+      # dump` collects the provider's --debug logs, so the artifact carried the
+      # cluster URI in clear while the job log did not. On a public repository
+      # anyone could download it. The diagnostics printed above cover what we
+      # have actually needed to debug failures, and they are masked.
       - name: Stop dev cluster
         if: always()
         run: |
