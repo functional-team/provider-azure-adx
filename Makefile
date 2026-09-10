@@ -56,7 +56,13 @@ XPKGS = provider-azure-adx
 # round-tripping every file through a YAML parser, losing all comments and the
 # key order. uptest keeps reading examples/ directly, so what the e2e suite
 # tests stays the manifests we ship.
-XPKG_EXAMPLES_DIR = $(OUTPUT_DIR)/examples
+# Per platform, because build.all runs the platforms in parallel (make -j2) and
+# each sub-make stages into this directory before calling xpkg build. Sharing
+# one directory means one platform wipes it while the other is reading it:
+# v0.1.0-rc.5 died on "failed to parse examples: yaml: line 1: did not find
+# expected node content" for linux_arm64 while linux_amd64 built fine, and
+# rc.4 had the same race and got away with it.
+XPKG_EXAMPLES_DIR = $(OUTPUT_DIR)/examples/$(PLATFORM)
 -include build/makelib/xpkg.mk
 
 xpkg.examples:
