@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="provider-azure-adx">
+  <title>provider-azure-adx</title>
+  <path d="M68 114 V306 A108 38 0 0 0 284 306 V114 A108 38 0 0 0 68 114 Z" fill="#135E96"/>
+  <ellipse cx="176" cy="114" rx="108" ry="38" fill="#46A2DC"/>
+  <path d="M68 178 A108 38 0 0 0 284 178" fill="none" stroke="#46A2DC" stroke-width="14"/>
+  <path d="M68 242 A108 38 0 0 0 284 242" fill="none" stroke="#46A2DC" stroke-width="14"/>
+  <circle cx="344" cy="326" r="74" fill="none" stroke="#7FD4EF" stroke-width="28"/>
+  <path d="M396 378 L444 426" stroke="#7FD4EF" stroke-width="30" stroke-linecap="round"/>
+</svg>

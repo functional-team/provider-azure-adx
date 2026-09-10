@@ -77,6 +77,26 @@ jobs:
       - name: Verify package in the Upbound registry
         if: vars.UPBOUND_PUBLISH == 'true'
         run: docker buildx imagetools inspect xpkg.upbound.io/functional-team/provider-azure-adx:${GITHUB_REF_NAME}
+      # The package icon is not part of the xpkg: the Marketplace reads it from
+      # extension layers that are appended to the pushed version afterwards.
+      # See extensions/README.md. The command authenticates through the docker
+      # config that docker/login-action wrote above; `up login` would be the
+      # fallback. It only touches xpkg.upbound.io -- the GHCR copy has no
+      # extensions -- and it rewrites the tag, so the digest changes.
+      - name: Install the up CLI
+        if: vars.UPBOUND_PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          curl -sL https://cli.upbound.io | sh
+          sudo mv up /usr/local/bin/up
+          up version
+      - name: Append the Marketplace extensions
+        if: vars.UPBOUND_PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          up alpha xpkg append --extensions-root=./extensions \
+            xpkg.upbound.io/functional-team/provider-azure-adx:${GITHUB_REF_NAME}
+          docker buildx imagetools inspect xpkg.upbound.io/functional-team/provider-azure-adx:${GITHUB_REF_NAME}
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
