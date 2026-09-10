@@ -33,20 +33,32 @@ echo "changing the KQL body of function/$FN"
 "$KUBECTL" -n "$NS" patch function.adx.functional.team/$FN --type=merge \
   -p "$(jq -n --arg b "$NEW_BODY" '{spec:{forProvider:{body:$b}}}')"
 
+# Not "kubectl wait --for=condition=Synced": that condition is still True from
+# before the patch, so it returns instantly and proves nothing. Wait for the
+# observation itself to catch up.
 echo "waiting for the provider to apply it"
-"$KUBECTL" -n "$NS" wait function.adx.functional.team/$FN --for=condition=Synced --timeout=5m
-"$KUBECTL" -n "$NS" wait function.adx.functional.team/$FN --for=condition=Ready --timeout=5m
+observed=""
+for _ in $(seq 1 60); do
+  observed=$("$KUBECTL" -n "$NS" get function.adx.functional.team/$FN -o jsonpath='{.status.atProvider.body}')
+  case "$observed" in
+    *"$MARKER"*) break ;;
+  esac
+  sleep 5
+done
 
-observed=$("$KUBECTL" -n "$NS" get function.adx.functional.team/$FN -o jsonpath='{.status.atProvider.body}')
 case "$observed" in
   *"$MARKER"*) echo "the cluster reports the new body" ;;
   *)
-    echo "FAIL: the changed KQL never reached the cluster." >&2
+    echo "FAIL: the changed KQL never reached the cluster within 5m." >&2
     echo "expected it to contain: $MARKER" >&2
     echo "read back: $observed" >&2
+    "$KUBECTL" -n "$NS" get function.adx.functional.team/$FN -o yaml >&2 || true
     exit 1
     ;;
 esac
+
+# The spec change must also be reflected as reconciled, not just written.
+"$KUBECTL" -n "$NS" wait function.adx.functional.team/$FN --for=condition=Synced --timeout=2m
 
 # A body that compares unequal after being written would be rewritten on every
 # poll. Watching past two intervals catches that.
