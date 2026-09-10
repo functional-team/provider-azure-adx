@@ -33,18 +33,23 @@ sleep "$WATCH_SECONDS"
 
 # Events carry either eventTime (new API) or lastTimestamp (legacy); take
 # whichever is set and keep the ones after the convergence mark.
-drifted=$("$KUBECTL" get events --all-namespaces \
-  --field-selector reason=UpdatedExternalResource -o json |
-  jq -r --arg since "$since" '
-    .items[]
-    | (.eventTime // .lastTimestamp) as $t
-    | select($t != null and $t > $since)
-    | "\(.involvedObject.kind)/\(.involvedObject.name) at \($t)"' | sort -u)
+"$KUBECTL" get events --all-namespaces \
+  --field-selector reason=UpdatedExternalResource -o json >/tmp/drift-events.json
 
-if [ -n "$drifted" ]; then
+# Blank lines are filtered out deliberately: an earlier version tested the
+# captured string for emptiness, and a stray blank line made it report a
+# failure it could not name.
+jq -r --arg since "$since" '
+  .items[]
+  | (.eventTime // .lastTimestamp) as $t
+  | select($t != null and $t > $since)
+  | "\(.involvedObject.kind)/\(.involvedObject.name) at \($t)"' /tmp/drift-events.json |
+  grep -v '^[[:space:]]*$' | sort -u >/tmp/drift-list.txt || true
+
+if [ -s /tmp/drift-list.txt ]; then
   echo "FAIL: these resources were updated again after they had converged," >&2
   echo "which means desired and observed never compare equal for them:" >&2
-  echo "$drifted" >&2
+  cat /tmp/drift-list.txt >&2
   exit 1
 fi
 

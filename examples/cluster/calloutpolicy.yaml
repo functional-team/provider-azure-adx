@@ -5,13 +5,15 @@ metadata:
   namespace: data-platform
 spec:
   forProvider:
+    # Only rules that grant access are stored: a cluster answers with 21
+    # built-in rules and every one of them has CanCall true. A rule with
+    # canCall false is dropped, and so is one that repeats a domain a built-in
+    # rule already covers -- ".database.windows.net" is covered, for instance.
+    # This is the example from Kusto's own documentation.
     callouts:
       - calloutType: sql
-        calloutUriRegex: '[a-z0-9]+\.database\.windows\.net/?$'
+        calloutUriRegex: 'sqlname\.database\.azure\.com/?$'
         canCall: true
-      - calloutType: webapi
-        calloutUriRegex: '.*'
-        canCall: false
   providerConfigRef:
     kind: ProviderConfig
     name: telemetry-prod
