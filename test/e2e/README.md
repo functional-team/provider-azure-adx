@@ -47,6 +47,27 @@ Variable: `ADX_E2E_ENABLED` (`true` to run the job at all). A job-level `if:`
 cannot reference the `secrets` context, so this plain on/off switch is a
 variable while the actual cluster config stays in secrets.
 
+## What the run asserts, and why not with uptest's update step
+
+Three post-assert hooks run inside the apply phase:
+
+- `assert-table-update.sh` and `assert-kql-update.sh` change a field and
+  require it to reach the cluster and then be left alone -- a structural field
+  on a Table, and a function's KQL body, which Kusto stores reformatted so it
+  can only be checked by behaviour.
+- `assert-no-drift.sh` generalizes the second half to every kind: once
+  everything has converged it watches past two poll intervals and fails on any
+  `UpdatedExternalResource` event. That check is why e2e runs the provider with
+  `--poll=1m` (`runtimeconfig.yaml`); at the 10m default a run finishes before
+  slow drift could ever show.
+
+uptest's own update step is not used. Its template patches the resource
+without `--namespace`, while every managed resource here is namespaced, so the
+patch never finds the object; its retry loop then spins forever because it
+increments with the non-POSIX `((attempt++))` under `/usr/bin/sh`, and the step
+dies at the timeout (run 34452246023). Its assert and delete templates do pass
+the namespace, so this looks like an oversight worth reporting upstream.
+
 ## Running locally
 
 ```sh

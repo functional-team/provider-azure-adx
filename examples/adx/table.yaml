@@ -7,12 +7,11 @@ metadata:
     # The Kusto name. Alternatively set spec.forProvider.name; metadata.name is
     # only the fallback and is usually not a valid PascalCase Kusto name.
     crossplane.io/external-name: RawEvents
-    # Marks this as uptest's root resource, which is what enables its update
-    # step at all -- without it the whole step is skipped. docstring is used
-    # because uptest greps status.atProvider for the exact value, and the
-    # docstring is echoed back unchanged while the column list is not.
-    meta.upbound.io/example-id: adx/v1alpha1/table
-    uptest.upbound.io/update-parameter: '{"docstring":"updated by uptest"}'
+    # Not uptest's own update step: its template patches without --namespace
+    # while every managed resource here is namespaced, so the patch never
+    # finds the object and its retry loop spins until the timeout
+    # (run 34452246023). This hook does the same job and works.
+    uptest.upbound.io/post-assert-hook: ../../test/e2e/assert-table-update.sh
 spec:
   forProvider:
     database: Telemetry
