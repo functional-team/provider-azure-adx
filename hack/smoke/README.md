@@ -8,8 +8,9 @@ does not depend on Azure identity plumbing.
 
 - Crossplane 2.x installed (`helm install crossplane crossplane-stable/crossplane
   -n crossplane-system --create-namespace`).
-- A GitHub token (classic PAT) with `read:packages`, as long as the package is
-  private.
+- An Upbound robot token for `xpkg.upbound.io/functional-team`, as long as the
+  repository is private. (A GitHub PAT with `read:packages` works too if you
+  point the manifest at the `ghcr.io` copy.)
 - A service principal that is Database Admin on the target database:
   `.add database <DB> admins ('aadapp=<clientId>;<tenantId>')`.
 - The examples use database `Telemetry`; either create it or replace the
@@ -18,8 +19,9 @@ does not depend on Azure identity plumbing.
 ## Steps
 
 ```sh
-kubectl -n crossplane-system create secret docker-registry ghcr-functional-team \
-  --docker-server=ghcr.io --docker-username=<github-user> --docker-password=<pat>
+kubectl -n crossplane-system create secret docker-registry upbound-functional-team \
+  --docker-server=xpkg.upbound.io \
+  --docker-username=<robot-access-id> --docker-password=<robot-token>
 
 kubectl apply -f hack/smoke/provider.yaml
 kubectl get provider.pkg provider-azure-adx -w        # HEALTHY=True

@@ -1,10 +1,12 @@
-# Installs the provider from the private GHCR package. Create the pull secret
-# first (see README.md in this directory).
+# Installs the provider from the Upbound registry. While the repository is
+# private, create the pull secret first (see README.md in this directory).
+# ghcr.io/functional-team/provider-azure-adx carries the same package without
+# the Marketplace extension layers, if you would rather pull from there.
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0-rc.1
+  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0-rc.5
   packagePullSecrets:
-    - name: ghcr-functional-team
+    - name: upbound-functional-team

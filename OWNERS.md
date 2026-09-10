@@ -1,12 +1,15 @@
 # OWNERS
 
-This page lists all maintainers for **this** repository. Each repository in the [Crossplane
-organization](https://github.com/crossplane/) will list their repository maintainers in their own
-`OWNERS.md` file.
+This page lists all maintainers for **this** repository. The project is maintained by
+[functional.team](https://functional.team) and is not part of the
+[Crossplane organization](https://github.com/crossplane/); the API groups live under
+`functional.team` and a move would rename every group and break every manifest.
 
-Please see the Crossplane
-[GOVERNANCE.md](https://github.com/crossplane/crossplane/blob/master/GOVERNANCE.md) for governance
-guidelines and responsibilities for the steering committee and maintainers.
+It does follow the Crossplane
+[GOVERNANCE.md](https://github.com/crossplane/crossplane/blob/master/GOVERNANCE.md) for the
+responsibilities of a maintainer, the
+[contributing guide](https://github.com/crossplane/crossplane/blob/master/CONTRIBUTING.md) and the
+[code of conduct](CODE_OF_CONDUCT.md).
 
 ## Maintainers
 

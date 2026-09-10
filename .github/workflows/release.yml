@@ -107,11 +107,6 @@ jobs:
             echo "no extension manifest in the index -- the icon did not land" >&2
             exit 1
           fi
-      - name: Upload build output
-        uses: actions/upload-artifact@v4
-        with:
-          name: output
-          path: _output/**
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
