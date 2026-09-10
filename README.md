@@ -1,3 +1,5 @@
+<img src="extensions/icons/icon.svg" alt="" width="80" align="right">
+
 # provider-azure-adx
 
 `provider-azure-adx` is a [Crossplane](https://crossplane.io/) provider for the
