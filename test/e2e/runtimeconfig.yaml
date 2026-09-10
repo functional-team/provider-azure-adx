@@ -1,0 +1,27 @@
+# DeploymentRuntimeConfig for the e2e run. The name and the image are patched
+# in by local.xpkg.mk; only the arguments matter here.
+#
+# --poll=1m instead of the 10m default. The provider re-reads every resource
+# once per poll interval, and that is when slow drift shows up: a resource that
+# converges and then quietly gets rewritten on every pass. With the default,
+# a run that takes a few minutes between apply and delete could never observe
+# it. The ingestion mapping bug (mapping rewritten forever, run 34326727528)
+# was only caught because that drift appeared immediately after create; the
+# same bug one poll later would have passed unnoticed.
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: runtimeconfig-provider-azure-adx
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      strategy: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              image: replaced-by-local.xpkg.mk
+              args:
+                - --debug
+                - --poll=1m

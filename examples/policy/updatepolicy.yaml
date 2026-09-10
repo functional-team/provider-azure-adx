@@ -32,6 +32,10 @@ metadata:
   namespace: data-platform
   annotations:
     crossplane.io/external-name: ParseRawEvents
+    # Changes the KQL body and checks that the change reaches the cluster and
+    # is then left alone. Kusto rewrites the body, so this cannot be a string
+    # comparison -- see the script.
+    uptest.upbound.io/post-assert-hook: ../../test/e2e/assert-kql-update.sh
 spec:
   forProvider:
     database: Telemetry

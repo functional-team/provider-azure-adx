@@ -39,8 +39,12 @@ IMAGES = provider-azure-adx
 # ====================================================================================
 # Setup XPKG
 
-# Images are published to ghcr.io under the personal account until the project
-# moves to crossplane-contrib (see docs/tech-implement.md, section 5.1).
+# Images are published to ghcr.io. The release workflow additionally pushes to
+# xpkg.upbound.io/functional-team when the UPBOUND_PUBLISH variable is set --
+# that registry is the one the Upbound Marketplace lists, and it renders the
+# API reference from the CRDs plus the annotations in package/crossplane.yaml.
+# The API groups stay under functional.team either way; registry path and API
+# group are unrelated.
 XPKG_REG_ORGS ?= ghcr.io/functional-team
 XPKG_REG_ORGS_NO_PROMOTE ?= ghcr.io/functional-team
 XPKGS = provider-azure-adx
@@ -93,6 +97,9 @@ UPTEST_INPUT_MANIFESTS ?= $(shell find examples -name '*.yaml' \
 	-not -name 'function.yaml' \
 	| sort | tr '\n' ',' | sed 's/,$$//')
 UPTEST_SETUP_SCRIPT ?= test/e2e/setup.sh
+# Runs the provider with --poll=1m so slow drift becomes observable within a
+# run; see the file for why.
+DRC_FILE ?= test/e2e/runtimeconfig.yaml
 UPTEST_DEFAULT_TIMEOUT ?= 1800s
 CROSSPLANE_VERSION ?= 2.0.2
 -include build/makelib/local.xpkg.mk

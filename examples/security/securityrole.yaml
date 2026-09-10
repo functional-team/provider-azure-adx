@@ -3,6 +3,11 @@ kind: SecurityRole
 metadata:
   name: raw-events-ingestors
   namespace: data-platform
+  annotations:
+    # Runs after every example has been asserted (this is the last manifest in
+    # the sorted list), and waits for all of them itself. Verifies that the
+    # provider stops writing once a resource has converged.
+    uptest.upbound.io/post-assert-hook: ../../test/e2e/assert-no-drift.sh
 spec:
   forProvider:
     database: Telemetry

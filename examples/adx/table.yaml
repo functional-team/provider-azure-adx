@@ -7,6 +7,12 @@ metadata:
     # The Kusto name. Alternatively set spec.forProvider.name; metadata.name is
     # only the fallback and is usually not a valid PascalCase Kusto name.
     crossplane.io/external-name: RawEvents
+    # Marks this as uptest's root resource, which is what enables its update
+    # step at all -- without it the whole step is skipped. docstring is used
+    # because uptest greps status.atProvider for the exact value, and the
+    # docstring is echoed back unchanged while the column list is not.
+    meta.upbound.io/example-id: adx/v1alpha1/table
+    uptest.upbound.io/update-parameter: '{"docstring":"updated by uptest"}'
 spec:
   forProvider:
     database: Telemetry
