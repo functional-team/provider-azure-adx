@@ -8,8 +8,10 @@ spec:
     sandboxes:
       - sandboxKind: PythonExecution
         initializeOnStartup: false
-        maxNumberOfSandboxes: 16
-        maxCpuPerSandbox: 50
+        # Without isEnabled the sandboxes stay off: Kusto defaults it to false.
+        isEnabled: true
+        targetCountPerNode: 16
+        maxCpuRatePerSandbox: 50
         maxMemoryMbPerSandbox: 10240
   providerConfigRef:
     kind: ProviderConfig

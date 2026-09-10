@@ -30,18 +30,21 @@ type SandboxRule struct {
 	// SandboxKind of the rule.
 	// +kubebuilder:validation:Enum=PythonExecution;RExecution
 	SandboxKind string `json:"sandboxKind"`
-	// VirtualMachineSize the sandbox VM size the settings apply to; empty for all sizes.
+	// IsEnabled allows sandboxes of this kind to run on the cluster's nodes.
+	// Defaults to false in Kusto, so without it the sandboxes stay off.
 	// +optional
-	VirtualMachineSize *string `json:"virtualMachineSize,omitempty"`
+	IsEnabled *bool `json:"isEnabled,omitempty"`
 	// InitializeOnStartup creates sandboxes eagerly on node startup.
 	// +optional
 	InitializeOnStartup *bool `json:"initializeOnStartup,omitempty"`
-	// MaxNumberOfSandboxes per node.
+	// TargetCountPerNode is how many sandboxes of this kind may run per node.
+	// Between one and twice the processors per node; Kusto defaults to 16.
 	// +optional
-	MaxNumberOfSandboxes *int64 `json:"maxNumberOfSandboxes,omitempty"`
-	// MaxCpuPerSandbox in percent of a core.
+	TargetCountPerNode *int64 `json:"targetCountPerNode,omitempty"`
+	// MaxCPURatePerSandbox is the maximum CPU rate one sandbox may use, as a
+	// percentage of all available cores (1-100). Kusto defaults to 50.
 	// +optional
-	MaxCPUPerSandbox *int64 `json:"maxCpuPerSandbox,omitempty"`
+	MaxCPURatePerSandbox *int64 `json:"maxCpuRatePerSandbox,omitempty"`
 	// MaxMemoryMbPerSandbox in MB.
 	// +optional
 	MaxMemoryMbPerSandbox *int64 `json:"maxMemoryMbPerSandbox,omitempty"`

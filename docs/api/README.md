@@ -7938,10 +7938,19 @@ SandboxRule configures one sandbox kind.
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>maxCpuPerSandbox</b></td>
+        <td><b>isEnabled</b></td>
+        <td>boolean</td>
+        <td>
+          IsEnabled allows sandboxes of this kind to run on the cluster's nodes.
+Defaults to false in Kusto, so without it the sandboxes stay off.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>maxCpuRatePerSandbox</b></td>
         <td>integer</td>
         <td>
-          MaxCpuPerSandbox in percent of a core.<br/>
+          MaxCPURatePerSandbox is the maximum CPU rate one sandbox may use, as a
+percentage of all available cores (1-100). Kusto defaults to 50.<br/>
           <br/>
             <i>Format</i>: int64<br/>
         </td>
@@ -7956,19 +7965,13 @@ SandboxRule configures one sandbox kind.
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>maxNumberOfSandboxes</b></td>
+        <td><b>targetCountPerNode</b></td>
         <td>integer</td>
         <td>
-          MaxNumberOfSandboxes per node.<br/>
+          TargetCountPerNode is how many sandboxes of this kind may run per node.
+Between one and twice the processors per node; Kusto defaults to 16.<br/>
           <br/>
             <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>virtualMachineSize</b></td>
-        <td>string</td>
-        <td>
-          VirtualMachineSize the sandbox VM size the settings apply to; empty for all sizes.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -13339,13 +13342,6 @@ policy type and is validated per kind.<br/>
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>loopPeriod</b></td>
-        <td>string</td>
-        <td>
-          LoopPeriod is the maximum time between merge iterations.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>maxExtentsToMerge</b></td>
         <td>integer</td>
         <td>
@@ -18006,33 +18002,6 @@ policy type and is validated per kind.<br/>
             <i>Validations</i>:<li>self.kind == 'Database' || has(self.name) || has(self.nameRef) || has(self.nameSelector): name, nameRef or nameSelector is required unless kind is Database</li>
         </td>
         <td>true</td>
-      </tr><tr>
-        <td><b>maxExtentSizeInMb</b></td>
-        <td>integer</td>
-        <td>
-          MaxExtentSizeInMb caps the compressed size per extent.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>maxOriginalSizeInMb</b></td>
-        <td>integer</td>
-        <td>
-          MaxOriginalSizeInMb caps the original size per extent.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>maxRowCount</b></td>
-        <td>integer</td>
-        <td>
-          MaxRowCount caps the rows per extent.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
       </tr><tr>
         <td><b>shardEngineMaxExtentSizeInMb</b></td>
         <td>integer</td>

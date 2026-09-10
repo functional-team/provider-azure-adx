@@ -54,10 +54,6 @@ type MergePolicyParameters struct {
 	// +optional
 	MaxExtentsToMerge *int64 `json:"maxExtentsToMerge,omitempty"`
 
-	// LoopPeriod is the maximum time between merge iterations.
-	// +optional
-	LoopPeriod *common.Timespan `json:"loopPeriod,omitempty"`
-
 	// MaxRangeInHours caps the creation time span of merged extents.
 	// +optional
 	MaxRangeInHours *int64 `json:"maxRangeInHours,omitempty"`

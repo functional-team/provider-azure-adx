@@ -441,9 +441,9 @@ func TestDesiredConversions(t *testing.T) {
 		t.Error("bad rate must fail")
 	}
 	mp := &v1alpha1.MergePolicy{}
-	mp.Spec.ForProvider = v1alpha1.MergePolicyParameters{PolicyTarget: target(common.EntityKindTable, "T"), LoopPeriod: ptr(common.Timespan("1h")), Lookback: &v1alpha1.MergeLookback{Kind: "Custom", CustomPeriod: ptr(common.Timespan("2d"))}}
+	mp.Spec.ForProvider = v1alpha1.MergePolicyParameters{PolicyTarget: target(common.EntityKindTable, "T"), Lookback: &v1alpha1.MergeLookback{Kind: "Custom", CustomPeriod: ptr(common.Timespan("2d"))}}
 	d, err = Merge().Desired(mp)
-	if err != nil || *d.(mergeJSON).Lookback.CustomPeriod != "2.00:00:00" || *d.(mergeJSON).LoopPeriod != "01:00:00" {
+	if err != nil || *d.(mergeJSON).Lookback.CustomPeriod != "2.00:00:00" {
 		t.Errorf("merge: %+v %v", d, err)
 	}
 	pp := &v1alpha1.PartitioningPolicy{}
@@ -467,8 +467,8 @@ func TestDesiredConversions(t *testing.T) {
 		t.Error("caching must reject bad window datetimes")
 	}
 	sh := &v1alpha1.ShardingPolicy{}
-	sh.Spec.ForProvider = v1alpha1.ShardingPolicyParameters{PolicyTarget: target(common.EntityKindTable, "T"), MaxRowCount: ptr(int64(1))}
-	if d, err := Sharding().Desired(sh); err != nil || *d.(shardingJSON).MaxRowCount != 1 {
+	sh.Spec.ForProvider = v1alpha1.ShardingPolicyParameters{PolicyTarget: target(common.EntityKindTable, "T"), ShardEngineMaxRowCount: ptr(int64(1))}
+	if d, err := Sharding().Desired(sh); err != nil || *d.(shardingJSON).ShardEngineMaxRowCount != 1 {
 		t.Error("sharding")
 	}
 	if len(SetupAllDefsForTest()) != 17 {

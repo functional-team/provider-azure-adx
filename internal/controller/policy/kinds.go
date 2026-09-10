@@ -323,7 +323,6 @@ type mergeJSON struct {
 	RowCountUpperBoundForMerge       *int64             `json:"RowCountUpperBoundForMerge,omitempty"`
 	OriginalSizeMBUpperBoundForMerge *int64             `json:"OriginalSizeMBUpperBoundForMerge,omitempty"`
 	MaxExtentsToMerge                *int64             `json:"MaxExtentsToMerge,omitempty"`
-	LoopPeriod                       *string            `json:"LoopPeriod,omitempty"`
 	MaxRangeInHours                  *int64             `json:"MaxRangeInHours,omitempty"`
 	AllowRebuild                     *bool              `json:"AllowRebuild,omitempty"`
 	AllowMerge                       *bool              `json:"AllowMerge,omitempty"`
@@ -337,11 +336,7 @@ func Merge() Def[*v1alpha1.MergePolicy] {
 		Policy: adxpolicy.Def{Name: "merge"},
 		Desired: func(cr *v1alpha1.MergePolicy) (any, error) {
 			p := cr.Spec.ForProvider
-			lp, err := ts(p.LoopPeriod)
-			if err != nil {
-				return nil, fmt.Errorf("loopPeriod: %w", err)
-			}
-			d := mergeJSON{RowCountUpperBoundForMerge: p.RowCountUpperBoundForMerge, OriginalSizeMBUpperBoundForMerge: p.OriginalSizeMBUpperBoundForMerge, MaxExtentsToMerge: p.MaxExtentsToMerge, LoopPeriod: lp, MaxRangeInHours: p.MaxRangeInHours, AllowRebuild: p.AllowRebuild, AllowMerge: p.AllowMerge}
+			d := mergeJSON{RowCountUpperBoundForMerge: p.RowCountUpperBoundForMerge, OriginalSizeMBUpperBoundForMerge: p.OriginalSizeMBUpperBoundForMerge, MaxExtentsToMerge: p.MaxExtentsToMerge, MaxRangeInHours: p.MaxRangeInHours, AllowRebuild: p.AllowRebuild, AllowMerge: p.AllowMerge}
 			if p.Lookback != nil {
 				cp, err := ts(p.Lookback.CustomPeriod)
 				if err != nil {
@@ -355,9 +350,6 @@ func Merge() Def[*v1alpha1.MergePolicy] {
 }
 
 type shardingJSON struct {
-	MaxRowCount                    *int64 `json:"MaxRowCount,omitempty"`
-	MaxExtentSizeInMb              *int64 `json:"MaxExtentSizeInMb,omitempty"`
-	MaxOriginalSizeInMb            *int64 `json:"MaxOriginalSizeInMb,omitempty"`
 	ShardEngineMaxRowCount         *int64 `json:"ShardEngineMaxRowCount,omitempty"`
 	ShardEngineMaxExtentSizeInMb   *int64 `json:"ShardEngineMaxExtentSizeInMb,omitempty"`
 	ShardEngineMaxOriginalSizeInMb *int64 `json:"ShardEngineMaxOriginalSizeInMb,omitempty"`
@@ -370,7 +362,7 @@ func Sharding() Def[*v1alpha1.ShardingPolicy] {
 		Policy: adxpolicy.Def{Name: "sharding"},
 		Desired: func(cr *v1alpha1.ShardingPolicy) (any, error) {
 			p := cr.Spec.ForProvider
-			return shardingJSON{MaxRowCount: p.MaxRowCount, MaxExtentSizeInMb: p.MaxExtentSizeInMb, MaxOriginalSizeInMb: p.MaxOriginalSizeInMb, ShardEngineMaxRowCount: p.ShardEngineMaxRowCount, ShardEngineMaxExtentSizeInMb: p.ShardEngineMaxExtentSizeInMb, ShardEngineMaxOriginalSizeInMb: p.ShardEngineMaxOriginalSizeInMb}, nil
+			return shardingJSON{ShardEngineMaxRowCount: p.ShardEngineMaxRowCount, ShardEngineMaxExtentSizeInMb: p.ShardEngineMaxExtentSizeInMb, ShardEngineMaxOriginalSizeInMb: p.ShardEngineMaxOriginalSizeInMb}, nil
 		},
 	}
 }

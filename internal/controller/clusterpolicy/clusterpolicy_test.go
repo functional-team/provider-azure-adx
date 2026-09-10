@@ -407,7 +407,7 @@ func TestMultiDatabaseAdminsHashOnly(t *testing.T) {
 func TestErrorsAndOtherKinds(t *testing.T) {
 	boom := fake.New("http://e").On("", nil, errors.New("boom"))
 	cr := &v1alpha1.SandboxPolicy{ObjectMeta: metav1.ObjectMeta{Name: "sb", Namespace: "ns"}}
-	cr.Spec.ForProvider.Sandboxes = []v1alpha1.SandboxRule{{SandboxKind: "PythonExecution", MaxNumberOfSandboxes: ptr(int64(16))}}
+	cr.Spec.ForProvider.Sandboxes = []v1alpha1.SandboxRule{{SandboxKind: "PythonExecution", TargetCountPerNode: ptr(int64(16))}}
 	if _, err := ext(boom, Sandbox()).Observe(context.Background(), cr); err == nil || !strings.Contains(err.Error(), errObserve) {
 		t.Errorf("observe error: %v", err)
 	}
@@ -426,7 +426,7 @@ func TestErrorsAndOtherKinds(t *testing.T) {
 	}
 
 	d, err := Sandbox().Desired(cr)
-	if err != nil || d.([]sandboxJSON)[0].SandboxKind != "PythonExecution" || d.([]sandboxJSON)[0].VirtualMachineSize != nil {
+	if err != nil || d.([]sandboxJSON)[0].SandboxKind != "PythonExecution" || *d.([]sandboxJSON)[0].TargetCountPerNode != 16 {
 		t.Errorf("sandbox desired: %+v %v", d, err)
 	}
 	qw := &v1alpha1.QueryWeakConsistencyPolicy{}

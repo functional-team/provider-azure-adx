@@ -213,10 +213,6 @@ spec:
                     required:
                     - kind
                     type: object
-                  loopPeriod:
-                    description: LoopPeriod is the maximum time between merge iterations.
-                    minLength: 1
-                    type: string
                   maxExtentsToMerge:
                     description: MaxExtentsToMerge caps the number of extents per
                       merge.

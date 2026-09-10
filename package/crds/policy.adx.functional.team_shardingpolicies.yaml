@@ -188,18 +188,6 @@ spec:
                         is Database
                       rule: self.kind == 'Database' || has(self.name) || has(self.nameRef)
                         || has(self.nameSelector)
-                  maxExtentSizeInMb:
-                    description: MaxExtentSizeInMb caps the compressed size per extent.
-                    format: int64
-                    type: integer
-                  maxOriginalSizeInMb:
-                    description: MaxOriginalSizeInMb caps the original size per extent.
-                    format: int64
-                    type: integer
-                  maxRowCount:
-                    description: MaxRowCount caps the rows per extent.
-                    format: int64
-                    type: integer
                   shardEngineMaxExtentSizeInMb:
                     description: ShardEngineMaxExtentSizeInMb caps the compressed
                       size per shard engine extent.

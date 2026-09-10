@@ -111,13 +111,15 @@ func Capacity() Def[*v1alpha1.CapacityPolicy] {
 	}
 }
 
+// Names as the service accepts and reports them; see
+// https://learn.microsoft.com/en-us/kusto/management/sandbox-policy.
 type sandboxJSON struct {
-	SandboxKind           string  `json:"SandboxKind"`
-	VirtualMachineSize    *string `json:"VirtualMachineSize,omitempty"`
-	InitializeOnStartup   *bool   `json:"InitializeOnStartup,omitempty"`
-	MaxNumberOfSandboxes  *int64  `json:"MaxNumberOfSandboxes,omitempty"`
-	MaxCPUPerSandbox      *int64  `json:"MaxCpuPerSandbox,omitempty"`
-	MaxMemoryMbPerSandbox *int64  `json:"MaxMemoryMbPerSandbox,omitempty"`
+	SandboxKind           string `json:"SandboxKind"`
+	IsEnabled             *bool  `json:"IsEnabled,omitempty"`
+	InitializeOnStartup   *bool  `json:"InitializeOnStartup,omitempty"`
+	TargetCountPerNode    *int64 `json:"TargetCountPerNode,omitempty"`
+	MaxCPURatePerSandbox  *int64 `json:"MaxCpuRatePerSandbox,omitempty"`
+	MaxMemoryMbPerSandbox *int64 `json:"MaxMemoryMbPerSandbox,omitempty"`
 }
 
 // Sandbox defines the SandboxPolicy kind (JSON array).
@@ -128,7 +130,7 @@ func Sandbox() Def[*v1alpha1.SandboxPolicy] {
 		Desired: func(cr *v1alpha1.SandboxPolicy) (any, error) {
 			out := make([]sandboxJSON, 0, len(cr.Spec.ForProvider.Sandboxes))
 			for _, s := range cr.Spec.ForProvider.Sandboxes {
-				out = append(out, sandboxJSON{SandboxKind: s.SandboxKind, VirtualMachineSize: s.VirtualMachineSize, InitializeOnStartup: s.InitializeOnStartup, MaxNumberOfSandboxes: s.MaxNumberOfSandboxes, MaxCPUPerSandbox: s.MaxCPUPerSandbox, MaxMemoryMbPerSandbox: s.MaxMemoryMbPerSandbox})
+				out = append(out, sandboxJSON{SandboxKind: s.SandboxKind, IsEnabled: s.IsEnabled, InitializeOnStartup: s.InitializeOnStartup, TargetCountPerNode: s.TargetCountPerNode, MaxCPURatePerSandbox: s.MaxCPURatePerSandbox, MaxMemoryMbPerSandbox: s.MaxMemoryMbPerSandbox})
 			}
 			return out, nil
 		},

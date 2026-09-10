@@ -9,8 +9,10 @@ spec:
     entity:
       kind: Table
       name: RawEvents
-    maxRowCount: 750000
-    maxExtentSizeInMb: 1024
+    # The service reports and accepts only the ShardEngine* names; the
+    # unprefixed ones are silently ignored.
+    shardEngineMaxRowCount: 750000
+    shardEngineMaxExtentSizeInMb: 1024
   providerConfigRef:
     kind: ProviderConfig
     name: telemetry-prod

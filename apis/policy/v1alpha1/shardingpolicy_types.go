@@ -30,18 +30,6 @@ import (
 type ShardingPolicyParameters struct {
 	PolicyTarget `json:",inline"`
 
-	// MaxRowCount caps the rows per extent.
-	// +optional
-	MaxRowCount *int64 `json:"maxRowCount,omitempty"`
-
-	// MaxExtentSizeInMb caps the compressed size per extent.
-	// +optional
-	MaxExtentSizeInMb *int64 `json:"maxExtentSizeInMb,omitempty"`
-
-	// MaxOriginalSizeInMb caps the original size per extent.
-	// +optional
-	MaxOriginalSizeInMb *int64 `json:"maxOriginalSizeInMb,omitempty"`
-
 	// ShardEngineMaxRowCount caps rows per extent created by the shard engine.
 	// +optional
 	ShardEngineMaxRowCount *int64 `json:"shardEngineMaxRowCount,omitempty"`

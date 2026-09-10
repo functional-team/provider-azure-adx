@@ -967,11 +967,6 @@ func (in *MergePolicyParameters) DeepCopyInto(out *MergePolicyParameters) {
 		*out = new(int64)
 		**out = **in
 	}
-	if in.LoopPeriod != nil {
-		in, out := &in.LoopPeriod, &out.LoopPeriod
-		*out = new(common.Timespan)
-		**out = **in
-	}
 	if in.MaxRangeInHours != nil {
 		in, out := &in.MaxRangeInHours, &out.MaxRangeInHours
 		*out = new(int64)
@@ -1909,21 +1904,6 @@ func (in *ShardingPolicyList) DeepCopyObject() runtime.Object {
 func (in *ShardingPolicyParameters) DeepCopyInto(out *ShardingPolicyParameters) {
 	*out = *in
 	in.PolicyTarget.DeepCopyInto(&out.PolicyTarget)
-	if in.MaxRowCount != nil {
-		in, out := &in.MaxRowCount, &out.MaxRowCount
-		*out = new(int64)
-		**out = **in
-	}
-	if in.MaxExtentSizeInMb != nil {
-		in, out := &in.MaxExtentSizeInMb, &out.MaxExtentSizeInMb
-		*out = new(int64)
-		**out = **in
-	}
-	if in.MaxOriginalSizeInMb != nil {
-		in, out := &in.MaxOriginalSizeInMb, &out.MaxOriginalSizeInMb
-		*out = new(int64)
-		**out = **in
-	}
 	if in.ShardEngineMaxRowCount != nil {
 		in, out := &in.ShardEngineMaxRowCount, &out.ShardEngineMaxRowCount
 		*out = new(int64)

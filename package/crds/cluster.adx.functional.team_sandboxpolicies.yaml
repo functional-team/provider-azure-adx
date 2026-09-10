@@ -72,16 +72,19 @@ spec:
                           description: InitializeOnStartup creates sandboxes eagerly
                             on node startup.
                           type: boolean
-                        maxCpuPerSandbox:
-                          description: MaxCpuPerSandbox in percent of a core.
+                        isEnabled:
+                          description: |-
+                            IsEnabled allows sandboxes of this kind to run on the cluster's nodes.
+                            Defaults to false in Kusto, so without it the sandboxes stay off.
+                          type: boolean
+                        maxCpuRatePerSandbox:
+                          description: |-
+                            MaxCPURatePerSandbox is the maximum CPU rate one sandbox may use, as a
+                            percentage of all available cores (1-100). Kusto defaults to 50.
                           format: int64
                           type: integer
                         maxMemoryMbPerSandbox:
                           description: MaxMemoryMbPerSandbox in MB.
-                          format: int64
-                          type: integer
-                        maxNumberOfSandboxes:
-                          description: MaxNumberOfSandboxes per node.
                           format: int64
                           type: integer
                         sandboxKind:
@@ -90,10 +93,12 @@ spec:
                           - PythonExecution
                           - RExecution
                           type: string
-                        virtualMachineSize:
-                          description: VirtualMachineSize the sandbox VM size the
-                            settings apply to; empty for all sizes.
-                          type: string
+                        targetCountPerNode:
+                          description: |-
+                            TargetCountPerNode is how many sandboxes of this kind may run per node.
+                            Between one and twice the processors per node; Kusto defaults to 16.
+                          format: int64
+                          type: integer
                       required:
                       - sandboxKind
                       type: object

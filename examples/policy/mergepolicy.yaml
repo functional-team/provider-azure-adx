@@ -9,7 +9,6 @@ spec:
     entity:
       kind: Database
     maxExtentsToMerge: 100
-    loopPeriod: 1h
     allowRebuild: true
     allowMerge: true
   providerConfigRef:
