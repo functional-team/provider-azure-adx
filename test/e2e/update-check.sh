@@ -13,15 +13,14 @@
 #
 # check_update <resource> <namespace> <patch json> <jsonpath> <marker>
 #
-# Asserts that the patch reaches the cluster and that nothing is written
-# afterwards. Both halves matter: the first says a real change is applied, the
-# second that it is applied once rather than on every poll.
+# Asserts that the patch reaches the cluster. That it is then written only
+# once is not checked here but by assert-no-drift.sh, which watches every
+# resource after they have all converged -- these two among them. Waiting for
+# quiet in each hook as well cost 300s and pushed the apply phase past its
+# budget, for an assertion already covered.
 check_update() {
   local resource="$1" ns="$2" patch="$3" jsonpath="$4" marker="$5"
   local kubectl="${KUBECTL:-kubectl}"
-  # Longer than two poll intervals (--poll=1m in e2e).
-  local quiet="${UPDATE_QUIET_SECONDS:-150}"
-  local name="${resource#*/}"
 
   echo "patching $resource"
   "$kubectl" -n "$ns" patch "$resource" --type=merge -p "$patch"
@@ -51,24 +50,5 @@ check_update() {
   esac
 
   "$kubectl" -n "$ns" wait "$resource" --for=condition=Synced --timeout=2m
-
-  local since
-  since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  echo "watching ${quiet}s for repeated updates"
-  sleep "$quiet"
-
-  local again
-  again=$("$kubectl" -n "$ns" get events \
-    --field-selector "reason=UpdatedExternalResource,involvedObject.name=$name" -o json |
-    jq -r --arg since "$since" '.items[] | (.eventTime // .lastTimestamp) as $t | select($t != null and $t > $since) | $t' |
-    grep -v '^[[:space:]]*$' || true)
-
-  if [ -n "$again" ]; then
-    echo "FAIL: $resource was updated again after the change had been applied," >&2
-    echo "so the comparison never treats the stored value as equal:" >&2
-    echo "$again" >&2
-    return 1
-  fi
-
-  echo "the change was applied once and then left alone"
+  echo "the change reached the cluster"
 }

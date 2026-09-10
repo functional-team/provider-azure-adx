@@ -52,9 +52,10 @@ variable while the actual cluster config stays in secrets.
 Three post-assert hooks run inside the apply phase:
 
 - `assert-table-update.sh` and `assert-kql-update.sh` change a field and
-  require it to reach the cluster and then be left alone -- a structural field
-  on a Table, and a function's KQL body, which Kusto stores reformatted so it
-  can only be checked by behaviour.
+  require it to reach the cluster -- a structural field on a Table, and a
+  function's KQL body, which Kusto stores reformatted so it can only be
+  checked by behaviour. That the change is then written only once is left to
+  the drift check below, which covers these two along with everything else.
 - `assert-no-drift.sh` generalizes the second half to every kind: once
   everything has converged it watches past two poll intervals and fails on any
   `UpdatedExternalResource` event. That check is why e2e runs the provider with
