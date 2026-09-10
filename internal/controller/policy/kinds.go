@@ -527,7 +527,7 @@ type managedIdentityJSON struct {
 func ManagedIdentity() Def[*v1alpha1.ManagedIdentityPolicy] {
 	return Def[*v1alpha1.ManagedIdentityPolicy]{
 		Kind:   base.Kind[*v1alpha1.ManagedIdentityPolicy]{GVK: v1alpha1.ManagedIdentityPolicyGroupVersionKind, Object: &v1alpha1.ManagedIdentityPolicy{}, List: &v1alpha1.ManagedIdentityPolicyList{}},
-		Policy: adxpolicy.Def{Name: "managed_identity", SetFields: []string{"AllowedUsages"}},
+		Policy: adxpolicy.Def{Name: "managed_identity", SetFields: []string{"AllowedUsages"}, AliasFields: map[string][]string{"ObjectId": {"system"}}},
 		Desired: func(cr *v1alpha1.ManagedIdentityPolicy) (any, error) {
 			out := make([]managedIdentityJSON, 0, len(cr.Spec.ForProvider.Identities))
 			for _, id := range cr.Spec.ForProvider.Identities {

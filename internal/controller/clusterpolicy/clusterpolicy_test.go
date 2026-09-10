@@ -221,11 +221,26 @@ func TestCalloutLifecycle(t *testing.T) {
 	if cr.Status.AtProvider.Policy == "" || cr.GetCondition(xpv2.TypeReady).Status != "True" {
 		t.Error("status must be filled and Available")
 	}
-	// Cluster drift: someone added a rule.
+	// A rule the provider does not manage is ignored. It has to be: a real
+	// cluster answers with 19 immutable built-in rules next to ours and marks
+	// none of them, so "the list equals ours" is not a question that can be
+	// asked. What remains is Additive semantics, like SecurityRole's.
 	cl.policies["callout"] = `[{"CalloutType":"sql","CalloutUriRegex":".*\\.database\\.windows\\.net","CanCall":true},{"CalloutType":"webapi","CalloutUriRegex":".*","CanCall":true}]`
 	got, _ = e.Observe(context.Background(), cr)
-	if got.ResourceUpToDate || !strings.Contains(got.Diff, "elements") {
-		t.Fatalf("drift must be detected: %+v", got)
+	if !got.ResourceUpToDate {
+		t.Fatalf("a rule the provider does not manage must be ignored: %+v", got)
+	}
+	// A managed rule that was changed in the cluster is still drift.
+	cl.policies["callout"] = `[{"CalloutType":"sql","CalloutUriRegex":".*\\.database\\.windows\\.net","CanCall":false}]`
+	got, _ = e.Observe(context.Background(), cr)
+	if got.ResourceUpToDate || !strings.Contains(got.Diff, "not found in cluster") {
+		t.Fatalf("a changed managed rule must be detected: %+v", got)
+	}
+	// So is one that disappeared entirely.
+	cl.policies["callout"] = `[{"CalloutType":"webapi","CalloutUriRegex":".*","CanCall":true}]`
+	got, _ = e.Observe(context.Background(), cr)
+	if got.ResourceUpToDate {
+		t.Fatalf("a missing managed rule must be detected: %+v", got)
 	}
 	if _, err := e.Update(context.Background(), cr); err != nil {
 		t.Fatal(err)

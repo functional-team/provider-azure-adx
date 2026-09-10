@@ -87,6 +87,13 @@ type Def struct {
 	// SetFields are JSON keys holding comma separated sets ("A, B") that are
 	// compared order-insensitively.
 	SetFields []string
+	// AliasFields maps a JSON key to desired values the service resolves on its
+	// own, so any observed value is accepted for them.
+	AliasFields map[string][]string
+	// ListSubset compares arrays by "every desired element is present" instead
+	// of by equal length, for policies the service returns with entries of its
+	// own alongside ours.
+	ListSubset bool
 	// NoBatch disables the ".show table * policy <name>" batch observe.
 	NoBatch bool
 	// HashOnly compares desired and observed only through the stage 2 hashes
@@ -143,7 +150,12 @@ func (d Def) CompareWith(desired any, observed json.RawMessage) (Result, error) 
 		// Structurally vacuous; equality is decided by the hash annotations alone.
 		return Result{Equal: true, Diff: "compared via hash only", DesiredTexts: []string{string(db)}, ObservedTexts: []string{Compact(observed)}}, nil
 	}
-	return Compare(desired, observed, d.KQLFields, d.SetFields)
+	return CompareWithOptions(desired, observed, Options{
+		KQLFields:   d.KQLFields,
+		SetFields:   d.SetFields,
+		AliasFields: d.AliasFields,
+		ListSubset:  d.ListSubset,
+	})
 }
 
 // ParseShow returns the Policy JSON of the first row of a ".show ... policy"

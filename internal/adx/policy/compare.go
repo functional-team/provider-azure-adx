@@ -39,7 +39,26 @@ type Result struct {
 
 type comparer struct {
 	kql, sets map[string]bool
-	res       *Result
+	// aliases maps a JSON key to desired values the service resolves to
+	// something of its own, e.g. ObjectId "system" comes back as the GUID of
+	// the cluster's system-assigned identity. Any observed value is accepted
+	// for those, because the desired side names an identity rather than a
+	// value.
+	aliases map[string]map[string]bool
+	// listSubset requires every desired array element to be present in the
+	// observed array instead of demanding equal length: the callout policy is
+	// returned with 19 immutable built-in rules alongside the two we manage.
+	listSubset bool
+	res        *Result
+}
+
+// Options tune Compare for a policy whose observed shape is not a plain echo
+// of what was sent.
+type Options struct {
+	KQLFields   []string
+	SetFields   []string
+	AliasFields map[string][]string
+	ListSubset  bool
 }
 
 // Compare checks that every field set in desired equals the observed policy
@@ -48,6 +67,11 @@ type comparer struct {
 // numbers numerically, {"Value": x} wrappers are unwrapped, and fields listed
 // in kqlFields are collected as normalized texts instead of compared.
 func Compare(desired any, observed json.RawMessage, kqlFields, setFields []string) (Result, error) {
+	return CompareWithOptions(desired, observed, Options{KQLFields: kqlFields, SetFields: setFields})
+}
+
+// CompareWithOptions is Compare with the extra allowances described by Options.
+func CompareWithOptions(desired any, observed json.RawMessage, o Options) (Result, error) {
 	db, err := json.Marshal(desired)
 	if err != nil {
 		return Result{}, fmt.Errorf("cannot marshal desired policy: %w", err)
@@ -61,7 +85,11 @@ func Compare(desired any, observed json.RawMessage, kqlFields, setFields []strin
 			return Result{}, fmt.Errorf("cannot parse observed policy JSON: %w", err)
 		}
 	}
-	c := &comparer{kql: toSet(kqlFields), sets: toSet(setFields), res: &Result{Equal: true}}
+	aliases := make(map[string]map[string]bool, len(o.AliasFields))
+	for k, vs := range o.AliasFields {
+		aliases[k] = toSet(vs)
+	}
+	c := &comparer{kql: toSet(o.KQLFields), sets: toSet(o.SetFields), aliases: aliases, listSubset: o.ListSubset, res: &Result{Equal: true}}
 	c.subset("", dv, ov)
 	return *c.res, nil
 }
@@ -122,6 +150,10 @@ func (c *comparer) subset(path string, d, o any) { //nolint:gocyclo // A type sw
 			c.fail(path, "want array, got %v", o)
 			return
 		}
+		if c.listSubset {
+			c.subsetOfList(path, dv, oa)
+			return
+		}
 		if len(oa) != len(dv) {
 			c.fail(path, "want %d elements, got %d", len(dv), len(oa))
 			return
@@ -131,6 +163,11 @@ func (c *comparer) subset(path string, d, o any) { //nolint:gocyclo // A type sw
 		}
 	case string:
 		key := lastKey(strings.TrimRight(path, "0123456789[]"))
+		if c.aliases[key][dv] {
+			// The desired value names something the service resolves itself,
+			// so whatever it reports back is the right answer by definition.
+			return
+		}
 		if c.kql[key] {
 			c.res.DesiredTexts = append(c.res.DesiredTexts, normalize.KQL(dv))
 			c.res.ObservedTexts = append(c.res.ObservedTexts, normalize.KQL(asString(o)))
@@ -253,4 +290,26 @@ func csvSet(s string) string {
 	}
 	sort.Strings(out)
 	return strings.Join(out, ",")
+}
+
+// subsetOfList requires every desired element to appear somewhere in observed,
+// ignoring extras the service adds and ignoring order. Each element is matched
+// with a throwaway comparer so a mismatch on one candidate does not poison the
+// result.
+func (c *comparer) subsetOfList(path string, desired, observed []any) {
+	for i, d := range desired {
+		found := false
+		for _, o := range observed {
+			probe := &comparer{kql: c.kql, sets: c.sets, aliases: c.aliases, listSubset: c.listSubset, res: &Result{Equal: true}}
+			probe.subset("", d, o)
+			if probe.res.Equal {
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.fail(fmt.Sprintf("%s[%d]", path, i), "not found in cluster (want %v)", d)
+			return
+		}
+	}
 }

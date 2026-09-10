@@ -201,3 +201,36 @@ func indexOf(s, sub string) int {
 	}
 	return -1
 }
+
+// The service resolves "system" to the GUID of the cluster's system-assigned
+// identity, and returns the callout policy with its immutable built-in rules
+// alongside the managed ones. Comparing those literally made both policies
+// differ on every observe, so they were rewritten once per poll interval
+// forever (e2e run 34439601775).
+func TestCompareServiceOwnedValues(t *testing.T) {
+	aliased := Options{AliasFields: map[string][]string{"ObjectId": {"system"}}}
+	desired := []map[string]any{{"ObjectId": "system", "AllowedUsages": "NativeIngestion"}}
+	observed := []byte(`[{"ObjectId":"5e821b3b-0961-4f0a-ac4b-598621c79772","AllowedUsages":"NativeIngestion"}]`)
+	res, err := CompareWithOptions(desired, observed, aliased)
+	if err != nil || !res.Equal {
+		t.Errorf("a resolved alias must compare equal: %+v %v", res, err)
+	}
+	// A different value under a non-aliased key must still be caught.
+	res, _ = CompareWithOptions([]map[string]any{{"ObjectId": "system", "AllowedUsages": "NativeIngestion"}},
+		[]byte(`[{"ObjectId":"5e821b3b","AllowedUsages":"ExternalTable"}]`), aliased)
+	if res.Equal {
+		t.Error("an alias must not excuse the other fields")
+	}
+
+	subset := Options{ListSubset: true}
+	ours := []map[string]any{{"CalloutType": "sql", "CanCall": true}}
+	withBuiltins := []byte(`[{"CalloutType":"kusto","CanCall":true},{"CalloutType":"sql","CanCall":true},{"CalloutType":"webapi","CanCall":false}]`)
+	res, err = CompareWithOptions(ours, withBuiltins, subset)
+	if err != nil || !res.Equal {
+		t.Errorf("extra rules the service owns must be ignored: %+v %v", res, err)
+	}
+	res, _ = CompareWithOptions([]map[string]any{{"CalloutType": "mysql", "CanCall": true}}, withBuiltins, subset)
+	if res.Equal {
+		t.Error("a managed rule that is absent must still be reported")
+	}
+}

@@ -47,6 +47,9 @@ type Def struct {
 	// NoDelete marks policies Kusto cannot delete (capacity, query weak
 	// consistency): deleting the managed resource leaves the policy as is.
 	NoDelete bool
+	// AliasFields and ListSubset are passed through to the policy comparison.
+	AliasFields map[string][]string
+	ListSubset  bool
 	// Merge marks policies Kusto only accepts via ".alter-merge". The capacity
 	// policy is one: ".alter" is rejected with "The '.alter' command is not
 	// supported for CapacityPolicy. Please use '.alter-merge' instead."
@@ -89,7 +92,7 @@ func (d Def) DeleteCmd() (cmd.Command, bool) {
 
 // CompareWith compares desired against the observed policy JSON.
 func (d Def) CompareWith(desired any, observed json.RawMessage) (adxpolicy.Result, error) {
-	return adxpolicy.Def{Name: d.Name, KQLFields: d.KQLFields, SetFields: d.SetFields, HashOnly: d.HashOnly}.CompareWith(desired, observed)
+	return adxpolicy.Def{Name: d.Name, KQLFields: d.KQLFields, SetFields: d.SetFields, HashOnly: d.HashOnly, AliasFields: d.AliasFields, ListSubset: d.ListSubset}.CompareWith(desired, observed)
 }
 
 // ParseShow returns the Policy JSON of a ".show cluster policy" result; ok is

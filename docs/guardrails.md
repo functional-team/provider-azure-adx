@@ -24,3 +24,24 @@ it.
 There is deliberately no plan/apply mode. For a preview, create the resource with
 `spec.managementPolicies: ["Observe"]` and read `status.atProvider`, then widen
 the policies.
+
+## What the callout policy can and cannot promise
+
+A cluster answers `.show cluster policy callout` with its 19 immutable built-in
+rules alongside the ones a `CalloutPolicy` manages, and marks none of them --
+every entry carries only `CalloutType`, `CalloutUriRegex` and `CanCall`
+(verified against a real cluster on 2026-09-10). Built-in and managed rules are
+therefore indistinguishable in the response.
+
+That makes one guarantee impossible and leaves the other intact:
+
+- **Not possible:** "no rules exist besides the managed ones". A rule added by
+  hand is indistinguishable from a built-in and is ignored, the same way
+  `SecurityRole` in `Additive` mode leaves foreign principals alone.
+- **Still holds:** every managed rule must be present and unchanged. A managed
+  rule that was altered or removed in the cluster is reported as drift and
+  restored.
+
+Requiring the lists to match exactly is not a stricter alternative, it simply
+never worked: with the built-ins present the comparison could never be equal, so
+the policy was rewritten on every poll interval, forever.

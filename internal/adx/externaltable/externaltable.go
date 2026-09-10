@@ -118,10 +118,22 @@ func normalizeKind(k string) string {
 	}
 }
 
-// URIOf returns the part of a connection string before the first ';'.
+// URIOf returns the storage location of a connection string: everything
+// before the credential. A credential follows either a ';' (an account key or
+// managed_identity=...) or a '?' (a SAS token, which is a query string).
+//
+// Both have to go, because neither is readable back: the service masks a SAS
+// as "******" (observed 2026-09-10, e2e run 34439601775):
+//
+//	sent:      https://acct.blob.core.windows.net/exports?se=...&sig=...
+//	read back: https://acct.blob.core.windows.net/exports?******
+//
+// Comparing those made the external table differ on every observe, so it was
+// rewritten once per poll interval, forever. The location alone identifies the
+// storage; whether the credential still matches is tracked by SecretHash.
 func URIOf(cs string) string {
 	cs = strings.TrimSpace(cs)
-	if i := strings.Index(cs, ";"); i >= 0 {
+	if i := strings.IndexAny(cs, ";?"); i >= 0 {
 		cs = cs[:i]
 	}
 	return strings.TrimRight(cs, "/")

@@ -95,6 +95,16 @@ func TestParse(t *testing.T) {
 	if URIOf(" https://a/b/;sig=x ") != "https://a/b" || URIOf("plain") != "plain" {
 		t.Error("URIOf")
 	}
+	// A SAS token lives in the query string and the service masks it, so a
+	// desired connection string and what comes back only agree on the location.
+	sas := "https://acct.blob.core.windows.net/exports?se=2027-09-09&sig=abc%3D"
+	masked := "https://acct.blob.core.windows.net/exports?******"
+	if URIOf(sas) != "https://acct.blob.core.windows.net/exports" || URIOf(sas) != URIOf(masked) {
+		t.Errorf("URIOf must drop the SAS: %q vs %q", URIOf(sas), URIOf(masked))
+	}
+	if !sameURIs([]string{sas}, []string{masked}) {
+		t.Error("a masked SAS must compare equal to the one that was sent")
+	}
 	obs := Observation(Observed{Kind: "storage", Columns: []Column{{"A", "string"}}, Properties: map[string]any{"Format": "Csv"}, ConnectionStringURIs: []string{"u"}})
 	if obs.DataFormat != "Csv" || len(obs.Columns) != 1 || obs.ConnectionStringURIs[0] != "u" {
 		t.Errorf("Observation: %+v", obs)

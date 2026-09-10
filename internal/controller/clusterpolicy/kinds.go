@@ -81,8 +81,13 @@ type calloutJSON struct {
 // Callout defines the CalloutPolicy kind (JSON array).
 func Callout() Def[*v1alpha1.CalloutPolicy] {
 	return Def[*v1alpha1.CalloutPolicy]{
-		Kind:   base.Kind[*v1alpha1.CalloutPolicy]{GVK: v1alpha1.CalloutPolicyGroupVersionKind, Object: &v1alpha1.CalloutPolicy{}, List: &v1alpha1.CalloutPolicyList{}},
-		Policy: adxclusterpolicy.Def{Name: "callout"},
+		Kind: base.Kind[*v1alpha1.CalloutPolicy]{GVK: v1alpha1.CalloutPolicyGroupVersionKind, Object: &v1alpha1.CalloutPolicy{}, List: &v1alpha1.CalloutPolicyList{}},
+		// The cluster answers with its 19 immutable built-in callout rules
+		// alongside the ones managed here (observed: "want 2 elements, got 21"),
+		// so only the managed rules can be required to be present. Microsoft
+		// documents the built-ins as undeletable, which is the same statement
+		// from the other side.
+		Policy: adxclusterpolicy.Def{Name: "callout", ListSubset: true},
 		Desired: func(cr *v1alpha1.CalloutPolicy) (any, error) {
 			out := make([]calloutJSON, 0, len(cr.Spec.ForProvider.Callouts))
 			for _, c := range cr.Spec.ForProvider.Callouts {
@@ -167,7 +172,7 @@ type managedIdentityJSON struct {
 func ManagedIdentity() Def[*v1alpha1.ClusterManagedIdentityPolicy] {
 	return Def[*v1alpha1.ClusterManagedIdentityPolicy]{
 		Kind:   base.Kind[*v1alpha1.ClusterManagedIdentityPolicy]{GVK: v1alpha1.ClusterManagedIdentityPolicyGroupVersionKind, Object: &v1alpha1.ClusterManagedIdentityPolicy{}, List: &v1alpha1.ClusterManagedIdentityPolicyList{}},
-		Policy: adxclusterpolicy.Def{Name: "managed_identity", SetFields: []string{"AllowedUsages"}},
+		Policy: adxclusterpolicy.Def{Name: "managed_identity", SetFields: []string{"AllowedUsages"}, AliasFields: map[string][]string{"ObjectId": {"system"}}},
 		Desired: func(cr *v1alpha1.ClusterManagedIdentityPolicy) (any, error) {
 			out := make([]managedIdentityJSON, 0, len(cr.Spec.ForProvider.Identities))
 			for _, id := range cr.Spec.ForProvider.Identities {
