@@ -44,7 +44,8 @@ spec:
 ```
 
 `ghcr.io/functional-team/provider-azure-adx` carries the same package, minus
-the Marketplace extension layers (see [`extensions/`](extensions)).
+the Marketplace extension layers (see
+[docs/marketplace-extensions.md](docs/marketplace-extensions.md)).
 
 While the repository is private, the `crossplane-system` namespace needs a pull
 secret, referenced via `spec.packagePullSecrets`. For Upbound that is a robot
