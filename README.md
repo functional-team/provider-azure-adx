@@ -20,16 +20,15 @@ Microsoft's own declarative option, the ARM *database script* (`kusto_script`),
 is fire-and-forget: it neither observes nor repairs drift. That gap is what this
 provider fills.
 
-Status: pre-release. Every release is pushed to two registries:
+Listed on the [Upbound Marketplace](https://marketplace.upbound.io/providers/functional-team/provider-azure-adx).
+Every release goes to two public registries, neither of which needs a pull
+secret:
 
-- `ghcr.io/functional-team/provider-azure-adx` — public, no pull secret.
-- `xpkg.upbound.io/functional-team/provider-azure-adx` — the one the Upbound
+- `xpkg.upbound.io/functional-team/provider-azure-adx` — the one the
   Marketplace lists, and the only one carrying the Marketplace extension
   layers (see [docs/marketplace-extensions.md](docs/marketplace-extensions.md)).
-  Pulling from it still needs an Upbound robot token.
-
-Both hold the identical provider; the install below uses the one that needs no
-credentials.
+- `ghcr.io/functional-team/provider-azure-adx` — the same package, plain, if
+  you would rather not depend on Upbound.
 
 ## Requirements
 
@@ -48,7 +47,7 @@ kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
+  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
 ```
 
 A step-by-step smoke test against a real cluster is in

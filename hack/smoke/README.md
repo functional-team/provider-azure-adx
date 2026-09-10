@@ -8,9 +8,8 @@ does not depend on Azure identity plumbing.
 
 - Crossplane 2.x installed (`helm install crossplane crossplane-stable/crossplane
   -n crossplane-system --create-namespace`).
-- Nothing for the registry: the manifest pulls from
-  `ghcr.io/functional-team`, which is public. (The Upbound copy still needs a
-  robot token until its pull access is public.)
+- Nothing for the registry: both `xpkg.upbound.io/functional-team` and
+  `ghcr.io/functional-team` are public, so no pull secret is needed.
 - A service principal that is Database Admin on the target database:
   `.add database <DB> admins ('aadapp=<clientId>;<tenantId>')`.
 - The examples use database `Telemetry`; either create it or replace the
