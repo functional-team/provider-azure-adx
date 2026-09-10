@@ -1,12 +1,10 @@
-# Installs the provider from the Upbound registry. While the repository is
-# private, create the pull secret first (see README.md in this directory).
-# The ghcr.io copy of the package is org-internal and cannot be made public,
-# so Upbound is the only registry an outside user can pull from.
+# ghcr.io serves this package publicly, so no pull secret is needed. The same
+# package sits at xpkg.upbound.io/functional-team/provider-azure-adx with the
+# Marketplace extension layers, but pulling from there needs a robot token
+# until that repository's pull access is public.
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0-rc.5
-  packagePullSecrets:
-    - name: upbound-functional-team
+  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0-rc.5

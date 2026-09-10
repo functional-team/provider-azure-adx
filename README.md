@@ -20,10 +20,16 @@ Microsoft's own declarative option, the ARM *database script* (`kusto_script`),
 is fire-and-forget: it neither observes nor repairs drift. That gap is what this
 provider fills.
 
-Status: pre-release. Packages are published to
-`xpkg.upbound.io/functional-team`, the registry the Upbound Marketplace lists.
-A copy goes to `ghcr.io/functional-team`, but that one stays private: the
-organization does not permit public packages, so pull it from Upbound.
+Status: pre-release. Every release is pushed to two registries:
+
+- `ghcr.io/functional-team/provider-azure-adx` — public, no pull secret.
+- `xpkg.upbound.io/functional-team/provider-azure-adx` — the one the Upbound
+  Marketplace lists, and the only one carrying the Marketplace extension
+  layers (see [docs/marketplace-extensions.md](docs/marketplace-extensions.md)).
+  Pulling from it still needs an Upbound robot token.
+
+Both hold the identical provider; the install below uses the one that needs no
+credentials.
 
 ## Requirements
 
@@ -42,24 +48,7 @@ kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
-```
-
-If the Upbound repository is not public yet, the `crossplane-system` namespace
-needs a pull secret with an Upbound robot token, referenced via
-`spec.packagePullSecrets`:
-
-```sh
-kubectl -n crossplane-system create secret docker-registry upbound-functional-team \
-  --docker-server=xpkg.upbound.io \
-  --docker-username=<robot-access-id> --docker-password=<robot-token>
-```
-
-```yaml
-spec:
-  package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
-  packagePullSecrets:
-    - name: upbound-functional-team
+  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
 ```
 
 A step-by-step smoke test against a real cluster is in
