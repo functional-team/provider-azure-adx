@@ -185,7 +185,7 @@ func TestCreateUpdateDelete(t *testing.T) {
 	want := []string{
 		".show database ['Telemetry'] schema as json",
 		".create table ['New'] (['A']:string) with (folder=\"F\")",
-		".alter table ['New'] column-docstrings (['A']:\"doc\")",
+		".alter-merge table ['New'] column-docstrings (['A']:\"doc\")",
 	}
 	if diff := cmp.Diff(want, kc.Commands()); diff != "" {
 		t.Errorf("create commands -want +got:\n%s", diff)

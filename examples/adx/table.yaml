@@ -20,6 +20,7 @@ spec:
         type: datetime
       - name: DeviceId
         type: string
+        docstring: Device that produced the event
       - name: Payload
         type: dynamic
         docstring: Raw JSON body

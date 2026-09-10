@@ -133,11 +133,34 @@ func TestDiff(t *testing.T) {
 			desired:  FromParams("T", params(common.Column{Name: "Ts", Type: "datetime", Docstring: ptr("when")}, common.Column{Name: "New", Type: "string", Docstring: ptr("fresh")})),
 			observed: observed(Column{Name: "Ts", Type: "datetime", Docstring: ptr("old")}),
 			steps:    []StepKind{StepAlterMergeSchema, StepSetColumnDocstrings},
-			cmds:     []string{".alter-merge table ['T'] (['Ts']:datetime, ['New']:string)", ".alter table ['T'] column-docstrings (['Ts']:\"when\", ['New']:\"fresh\")"},
+			cmds:     []string{".alter-merge table ['T'] (['Ts']:datetime, ['New']:string)", ".alter-merge table ['T'] column-docstrings (['Ts']:\"when\", ['New']:\"fresh\")"},
 		},
 		"columnDocstringEqual": {
 			desired:  FromParams("T", params(common.Column{Name: "Ts", Type: "datetime", Docstring: ptr("when")})),
 			observed: observed(Column{Name: "Ts", Type: "datetime", Docstring: ptr("when")}),
+		},
+		// Issue #1: adding a column to a table whose other columns already
+		// carry docstrings. Only the new column is in the list, so the verb
+		// has to be .alter-merge -- .alter would strip the docstrings of
+		// DeviceId and Payload, and the table would then flip between two
+		// docstring sets on every reconcile, reporting Synced=True in both.
+		"columnDocstringsKeepUnchangedOnes": {
+			desired: FromParams("SmokeEvents", params(
+				common.Column{Name: "Timestamp", Type: "datetime"},
+				common.Column{Name: "DeviceId", Type: "string", Docstring: ptr("Synthetic device id")},
+				common.Column{Name: "Payload", Type: "dynamic", Docstring: ptr("Raw JSON body")},
+				common.Column{Name: "IsProcessed", Type: "bool", Docstring: ptr("Added after the first apply")},
+			)),
+			observed: observed(
+				Column{Name: "Timestamp", Type: "datetime"},
+				Column{Name: "DeviceId", Type: "string", Docstring: ptr("Synthetic device id")},
+				Column{Name: "Payload", Type: "dynamic", Docstring: ptr("Raw JSON body")},
+			),
+			steps: []StepKind{StepAlterMergeSchema, StepSetColumnDocstrings},
+			cmds: []string{
+				".alter-merge table ['SmokeEvents'] (['Timestamp']:datetime, ['DeviceId']:string, ['Payload']:dynamic, ['IsProcessed']:bool)",
+				".alter-merge table ['SmokeEvents'] column-docstrings (['IsProcessed']:\"Added after the first apply\")",
+			},
 		},
 	}
 	for name, tc := range cases {
@@ -182,7 +205,7 @@ func TestBuildCreateDelete(t *testing.T) {
 	cmds := BuildCreate(FromParams("Raw Events", p))
 	want := []string{
 		".create table ['Raw Events'] (['Ts']:datetime, ['P']:dynamic) with (docstring=\"Landing\", folder=\"Raw\")",
-		".alter table ['Raw Events'] column-docstrings (['P']:\"body\")",
+		".alter-merge table ['Raw Events'] column-docstrings (['P']:\"body\")",
 	}
 	if len(cmds) != len(want) {
 		t.Fatalf("got %d commands", len(cmds))

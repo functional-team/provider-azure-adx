@@ -222,7 +222,7 @@ func metadataSteps(d Desired, o Observed, obs map[string]Column) []Step {
 		steps = append(steps, Step{Kind: StepSetDocstring, Command: cmd.New(".alter table ", cmd.Ident(d.Name), " docstring ", cmd.Str(*d.Docstring))})
 	}
 	if c := columnDocstrings(d, obs); c != "" {
-		steps = append(steps, Step{Kind: StepSetColumnDocstrings, Command: cmd.New(".alter table ", cmd.Ident(d.Name), " column-docstrings ", c)})
+		steps = append(steps, Step{Kind: StepSetColumnDocstrings, Command: cmd.New(alterMergeColumnDocstrings, cmd.Ident(d.Name), " column-docstrings ", c)})
 	}
 	return steps
 }
@@ -239,9 +239,25 @@ func sameOrder(d, o []Column) bool {
 	return true
 }
 
+// alterMergeColumnDocstrings has to be the merging verb. ".alter table T
+// column-docstrings (...)" replaces the whole set: "columns not explicitly set
+// will have this property removed". Since the list below holds only the
+// columns whose docstring changed, ".alter" would strip every other column's
+// docstring, the next Observe would see that as drift, write the previous set
+// back, and drop the new one again -- the table oscillates between two states
+// forever while reporting Synced=True, because each write succeeds. Reported
+// as issue #1 against v0.1.0-rc.3, with three docstringed columns taking turns
+// on every reconcile. ".alter-merge" leaves columns it does not name alone.
+const alterMergeColumnDocstrings = ".alter-merge table "
+
 // columnDocstrings renders the column-docstrings list for desired columns
 // whose docstring is set and differs from the observed one. Returns "" if
 // nothing differs.
+//
+// Only changed columns are listed, which is what makes the merging verb
+// mandatory; see alterMergeColumnDocstrings. A docstring the spec no longer
+// sets is left alone rather than cleared -- same "only add" stance as
+// schemaUpdateMode: Merge.
 func columnDocstrings(d Desired, obs map[string]Column) string {
 	var items []string
 	for _, c := range d.Columns {
@@ -282,7 +298,7 @@ func BuildCreate(d Desired) []cmd.Command {
 	}
 	cmds := []cmd.Command{cmd.New(".create table ", cmd.Ident(d.Name), " ", schemaOf(d.Columns), cmd.With(props))}
 	if c := columnDocstrings(d, map[string]Column{}); c != "" {
-		cmds = append(cmds, cmd.New(".alter table ", cmd.Ident(d.Name), " column-docstrings ", c))
+		cmds = append(cmds, cmd.New(alterMergeColumnDocstrings, cmd.Ident(d.Name), " column-docstrings ", c))
 	}
 	return cmds
 }

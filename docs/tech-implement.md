@@ -264,7 +264,7 @@ spec:
 | Update Schema (Merge) | `.alter-merge table ['T'] (...)` | nur Hinzufügen; fehlende Spalten im Spec werden **ignoriert**, tauchen aber als Drift-Hinweis im Status auf |
 | Update Schema (Replace) | `.alter table ['T'] (...)` | entfernt Spalten und deren Daten; nur bei `schemaUpdateMode: Replace` |
 | Typänderung einer Spalte | – | immer Fehler: `Synced=False`, Meldung „column X type change int→long is not supported; recreate manually“ |
-| Update Metadaten | `.alter table ['T'] docstring "..."`, `.alter table ['T'] folder "..."`, `.alter table ['T'] column-docstrings (['C']:"...")` | getrennt vom Schema |
+| Update Metadaten | `.alter table ['T'] docstring "..."`, `.alter table ['T'] folder "..."`, `.alter-merge table ['T'] column-docstrings (['C']:"...")` | getrennt vom Schema |
 | Delete | `.drop table ['T'] ifexists` | Datenverlust, Crossplane-Standard-Delete (F8) |
 
 Spaltentypen: Enum `bool, datetime, dynamic, guid, int, long, real, decimal, string, timespan`. Aliase (`boolean, date, uuid, uniqueid, double, time`) werden beim Vergleich auf die kanonische Form gemappt, weil `.show` kanonisch antwortet.
