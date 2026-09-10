@@ -224,17 +224,32 @@ while building), [docs/spikes.md](docs/spikes.md) (what is still unverified
 against a real cluster), [docs/migration.md](docs/migration.md) (from the
 Terraform provider).
 
+## Known limitations
+
+- **`CalloutPolicy` is unverified.** On the development cluster
+  `.alter cluster policy callout` succeeds and changes nothing: the policy
+  keeps returning its 21 built-in rules, including for a rule copied verbatim
+  from Microsoft's documentation. The managed resource then reports
+  `Synced=True` while the rule was never stored, and rewrites it every poll.
+  Whether the command has to be `.alter-merge`, or whether that cluster SKU
+  refuses user-defined callouts at all, is open ([S12](docs/spikes.md)). Treat
+  the kind as unsupported until it is settled, and check
+  `.show cluster policy callout` after applying one.
+- The `azureEnvironment` values `AzureChinaCloud` and `AzureUSGovernment` are
+  wired through to the SDK but untested.
+- Microsoft Fabric Eventhouse uses the same engine and should work, but is
+  untested and unsupported.
+
 ## Roadmap
 
-- M0/M1/M2/M3 code is complete: client layer, Table, Function, all Tier 1
-  policies, MaterializedView, ExternalTable, ContinuousExport, IngestionMapping,
-  SecurityRole, EntityGroup and the cluster-level Tier 2 kinds.
-- Before `v0.1.0`: run the emulator integration suite in CI, run the e2e suite
-  against a development cluster and close the spikes in
-  [docs/spikes.md](docs/spikes.md). The API groups live under
-  `functional.team`; the project is maintained by functional.team and is not
-  planned to move to crossplane-contrib (a group rename would break every
-  manifest).
+- `v0.1.0`: all kinds implemented, the emulator integration suite runs in CI,
+  and create/observe/update/delete are verified against a real ADX cluster by
+  the e2e suite on every commit. The API groups live under `functional.team`;
+  the project is maintained by functional.team and is not planned to move to
+  crossplane-contrib (a group rename would break every manifest).
+- Next: close [S12](docs/spikes.md) and bring `CalloutPolicy`,
+  `ClusterManagedIdentityPolicy` and `QueryAccelerationPolicy` into the e2e
+  suite.
 - Later: `v1beta1` for Tier 1, SQL/Cosmos external tables, GraphModel.
 
 ## Contributing

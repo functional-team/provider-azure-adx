@@ -47,7 +47,7 @@ metadata:
       metadata:
         name: provider-azure-adx
       spec:
-        package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0-rc.4
+        package: xpkg.upbound.io/functional-team/provider-azure-adx:v0.1.0
       ```
 
       ## Connect to a cluster
@@ -137,11 +137,20 @@ metadata:
       retryable. Metrics: `adx_commands_total`, `adx_command_duration_seconds`,
       `adx_commands_throttled_total`, `adx_observe_cache_requests_total`.
 
+      ## Known limitations
+
+      **`CalloutPolicy` is unverified.** On the development cluster
+      `.alter cluster policy callout` succeeds and changes nothing: the policy
+      keeps returning its 21 built-in rules, including for a rule copied
+      verbatim from Microsoft's documentation. The managed resource then
+      reports `Synced=True` while the rule was never stored, and rewrites it
+      every poll. Treat the kind as unsupported until that is settled, and
+      check `.show cluster policy callout` after applying one.
+
       ## Status
 
-      Pre-release. Create, observe, update and delete are verified against a
-      real ADX cluster in CI on every commit. What is still unverified is
-      tracked in
+      Create, observe, update and delete are verified against a real ADX
+      cluster in CI on every commit. What is still unverified is tracked in
       [docs/spikes.md](https://github.com/functional-team/provider-azure-adx/blob/main/docs/spikes.md).
 
       Full documentation, examples for every kind and the generated API

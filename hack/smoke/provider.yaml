@@ -7,4 +7,4 @@ kind: Provider
 metadata:
   name: provider-azure-adx
 spec:
-  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0-rc.5
+  package: ghcr.io/functional-team/provider-azure-adx:v0.1.0
